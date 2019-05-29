@@ -3,7 +3,7 @@ import symboltable.*;
 import staticheckingexception.*;
 import java.util.*;
 
-public class TypeCheck{
+public class TypeCheck {
   public SymbolTable ST;
   String currentClass="";
   String currentMethod="";

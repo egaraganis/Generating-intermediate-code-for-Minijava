@@ -6,7 +6,6 @@ import staticheckingexception.*;
 
 class Main {
   public static void main(String[] args){
-    int InputsPassed = 0;
     if (args.length < 1){
       System.err.println("Please add input files");
       System.exit(1);
@@ -15,23 +14,20 @@ class Main {
     // Static Checking for every file given as input
     for(int i=0; i<args.length; i++){
       try {
-        System.out.print("\n   ▸ Generating LLVM Code for: " + args[i]);
+        System.out.println("\n   ▸ Generating LLVM Code for: " + args[i]);
         fis = new FileInputStream(args[i]);
         MiniJavaParser parser = new MiniJavaParser(fis);
         Goal root = parser.Goal(); // get the root of the tree
         // Populate the symbol table
         STPVisitor SymbolTablePopulator = new STPVisitor();
         root.accept(SymbolTablePopulator, null);
-        //SymbolTablePopulator.getSymbolTable().ListEverything();
-        //System.out.println("     • Populating the Symbol Table - Uniqueness Checks finished successfully...");
         // Type check the program
         TCVisitor TypeChecker = new TCVisitor(SymbolTablePopulator.getSymbolTable());
         root.accept(TypeChecker,null);
-        //System.out.println("     • Type Cheking the input finished successfully...");
-        System.out.print(" ✓ \n\n\n");
-        // Produce offset results
+        // Calculate offsets
         TypeChecker.getTypeCheck().StartCalculation();
-        InputsPassed++;
+        // Generate LLVM code - Lowering visitor
+        LWRVisitor LoweringVisitor = new LWRVisitor(args[i]);
       }
       catch (ParseException ex) {
         System.out.println(ex.getMessage());

@@ -381,7 +381,7 @@ public class TypeCheck{
         continue;
       }
       // If class inherits from another,start from where it left
-      System.out.println("\n\t\t\t--------------Class " + thisClass + "--------------");
+      //System.out.println("\n\t\t\t--------------Class " + thisClass + "--------------");
       String superclass = ST.classes_data.get(thisClass).extendsFrom;
       if(superclass != "" && !(superclass.equals(MainClassName))){
         VarCounter = trackClassesFields.get(superclass);
@@ -396,7 +396,7 @@ public class TypeCheck{
         trackClassesMethods.put(thisClass,0);
       }
       // for every field in class, calculate the offset
-      System.out.println("\n\t\t\t     --------Variables--------");
+      //System.out.println("\n\t\t\t     --------Variables--------");
       Set< Map.Entry <String,String> > st_f = ST.classes_data.get(thisClass).class_variables_data.entrySet();
       for (Map.Entry<String,String> cur_f:st_f){
         String thisField = cur_f.getKey();
@@ -408,11 +408,11 @@ public class TypeCheck{
           size = 1;
         else
           size = 8;
-        System.out.println("\t\t\t     " + thisClass + "." + thisField + " : " + VarCounter);
+        //`Syste`m.out.println("\t\t\t     " + thisClass + "." + thisField + " : " + VarCounter);
         VarCounter += size;
       }
       // for every method in class, calculate the offset
-      System.out.println("\n\t\t\t     ---------Methods---------");
+      //System.out.println("\n\t\t\t     ---------Methods---------");
       Set< Map.Entry <String,MethodInfo> > st_m = ST.classes_data.get(thisClass).methods_data.entrySet();
       for (Map.Entry<String,MethodInfo> cur_m:st_m){
         // if method exists in class' ancestors, skip
@@ -427,7 +427,7 @@ public class TypeCheck{
         }
         if(existsInSuperclass)
           continue;
-        System.out.println("\t\t\t     " + thisClass + "." + thisMethod + " : " + MethodCounter);
+        //System.out.println("\t\t\t     " + thisClass + "." + thisMethod + " : " + MethodCounter);
         MethodCounter += 8;
       }
       trackClassesFields.put(thisClass,VarCounter);

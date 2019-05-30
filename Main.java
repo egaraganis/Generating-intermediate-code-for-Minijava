@@ -27,7 +27,7 @@ class Main {
         // Calculate offsets
         TypeChecker.getTypeCheck().StartCalculation();
         // Generate LLVM code - Lowering visitor
-        LWRVisitor LoweringVisitor = new LWRVisitor(args[i]);
+        LWRVisitor LoweringVisitor = new LWRVisitor(args[i],SymbolTablePopulator.getSymbolTable());
       }
       catch (ParseException ex) {
         System.out.println(ex.getMessage());

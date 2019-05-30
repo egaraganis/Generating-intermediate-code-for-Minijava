@@ -34,7 +34,7 @@ define i32 @main() {
 	%_7 = bitcast i8* %_6 to i32 (i8*,i32)*
 	%_8 = call i32 %_7(i8* %_0, i32 10)
 	call void (i32) @print_int(i32 %_8)
-	
+
 	ret i32 0
 }
 
@@ -42,14 +42,14 @@ define i32 @Fac.ComputeFac(i8* %this, i32 %.num) {
 	%num = alloca i32
 	store i32 %.num, i32* %num
 	%num_aux = alloca i32
-	
+
 	%_3 = load i32, i32* %num
 	%_4 = icmp slt i32 %_3, 1
 	br i1 %_4, label %if0, label %if1
 
 if0:
 		store i32 1, i32* %num_aux
-		
+
 		br label %if2
 
 if1:
@@ -66,11 +66,11 @@ if1:
 		%_11 = call i32 %_10(i8* %this, i32 %_13)
 		%_14 = mul i32 %_5, %_11
 		store i32 %_14, i32* %num_aux
-		
+
 		br label %if2
 
 if2:
-	
+
 	%_15 = load i32, i32* %num_aux
 	ret i32 %_15
 }

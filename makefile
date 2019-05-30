@@ -9,4 +9,5 @@ clean:
 	rm -f *.class *~
 	rm -f ./symboltable/*.class
 	rm -f ./typecheck/*.class
+	rm -f ./lowering/*.class
 	rm -f ./StatiCheckingException/*.class

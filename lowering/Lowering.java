@@ -3,7 +3,29 @@ import symboltable.*;
 import java.util.*;
 
 public class Lowering {
+  String currentClass = "";
+  String currentMethod = "";
   String BUFFER = "";
+  SymbolTable ST;
+
+  // Constructor
+  public Lowering(SymbolTable symbolTable){
+    ST = symbolTable;
+  }
+
+  // Setter methods
+  public void SetCurrentMethod(String curMethod){
+    currentMethod = curMethod;
+  }
+
+  public void SetCurrentClass(String curClass){
+    currentClass = curClass;
+  }
+
+  // Print current class and current method
+  public void WhereAreWe(){
+    System.out.println("We are in: " + currentClass + "," + currentMethod);
+  }
 
   // Return llvm type based on minijava type
   public String LLVM_type(String Minijava_type){
@@ -28,10 +50,10 @@ public class Lowering {
   }
 
   // Emit VTables for program classes
-  public void Emit_VTables(LinkedHashMap <String,ClassInfo> classes_data){
+  public void Emit_VTables(){
     String CODE = "";
 
-    Set<Map.Entry <String,ClassInfo>> st = classes_data.entrySet();
+    Set<Map.Entry <String,ClassInfo>> st = ST.classes_data.entrySet();
     boolean isMainClass = true;
     String MainClassName;
     // For every class
@@ -52,13 +74,13 @@ public class Lowering {
       }
       else{
         // Declare VTable Size
-        int noOfFunctions = classes_data.get(currentClass).methods_data.size();
+        int noOfFunctions = ST.classes_data.get(currentClass).methods_data.size();
         declareVTableSize = String.format("[%d x i8*]",noOfFunctions);
         // Fill VTable
         boolean flagForFirstArg = true;
         fillVTable = "[";
         // Iterate all class' methods
-        Set<Map.Entry<String,MethodInfo>> st1 = classes_data.get(currentClass).methods_data.entrySet();
+        Set<Map.Entry<String,MethodInfo>> st1 = ST.classes_data.get(currentClass).methods_data.entrySet();
         for (Map.Entry<String,MethodInfo> cur1:st1){
           String methodName = cur1.getKey();
           String llvm_methodName = "@" + currentClass + "." + methodName;
@@ -90,6 +112,40 @@ public class Lowering {
 
     // Append code to buffer
     CODE += "\n";
+    BUFFER += CODE;
+  }
+
+  // Emit Main Method LLVM code
+  public void Emit_MainMethodDefinition(){
+    String CODE = "\n\ndefine i32 @main() {";
+
+    BUFFER += CODE;
+  }
+
+  // Emit closing bracket
+  public void Emit_RBRACK(){
+    BUFFER += "\n}";
+  }
+
+  // Emit Method Definition LLVM code
+  public void Emit_MethodDefinition(String methodName){
+    String CODE = "";
+
+    MethodInfo method_data = ST.classes_data.get(currentClass).methods_data.get(methodName);
+    // Get method type in llvm
+    String llvm_method_type = LLVM_type(method_data.type);
+    String llvm_method_name = "@" + currentClass + "." + currentMethod;
+    String llvm_method_args = "i8* %this";
+    // Iretate all method's arguments
+    Set< Map.Entry <String,String> > st = method_data.arguments_data.entrySet();
+    for (Map.Entry<String,String> cur:st){
+      String argName = cur.getKey();
+      String argType = cur.getValue();
+      llvm_method_args += ", " + LLVM_type(argType) + " %." + argName;
+    }
+
+    CODE = String.format("\n\ndefine %s %s (%s) {",llvm_method_type,llvm_method_name,llvm_method_args);
+
     BUFFER += CODE;
   }
 

@@ -28,6 +28,8 @@ class Main {
         TypeChecker.getTypeCheck().StartCalculation();
         // Generate LLVM code - Lowering visitor
         LWRVisitor LoweringVisitor = new LWRVisitor(args[i],SymbolTablePopulator.getSymbolTable());
+        root.accept(LoweringVisitor,null);
+        LoweringVisitor.getL().Log_Buffer();
       }
       catch (ParseException ex) {
         System.out.println(ex.getMessage());

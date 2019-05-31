@@ -127,6 +127,14 @@ public class Lowering {
     BUFFER += "\n}";
   }
 
+  // Emit variable declaration in llvm
+  public void Emit_VarDeclaration(String vtype,String vname){
+    if( currentMethod != ""){
+      String CODE = "\t%" + vname + " = alloca " + LLVM_type(vtype) + "\n";
+      BUFFER += CODE;
+    }
+  }
+
   // Emit Method Definition LLVM code
   public void Emit_MethodDefinition(String methodName){
     String CODE = "";
@@ -136,15 +144,19 @@ public class Lowering {
     String llvm_method_type = LLVM_type(method_data.type);
     String llvm_method_name = "@" + currentClass + "." + currentMethod;
     String llvm_method_args = "i8* %this";
+    String llvm_args_alloc = "";
     // Iretate all method's arguments
     Set< Map.Entry <String,String> > st = method_data.arguments_data.entrySet();
     for (Map.Entry<String,String> cur:st){
       String argName = cur.getKey();
       String argType = cur.getValue();
-      llvm_method_args += ", " + LLVM_type(argType) + " %." + argName;
+      String llvm_arg_type = LLVM_type(argType);
+      llvm_method_args += ", " + llvm_arg_type+ " %." + argName;
+      llvm_args_alloc += "\t%" + argName + " = alloca " + llvm_arg_type + "\n";
+      llvm_args_alloc += "\tstore " + llvm_arg_type + " " + "%." + argName;
+      llvm_args_alloc += ", " + llvm_arg_type + "* " + "%" + argName + "\n";
     }
-
-    CODE = String.format("\n\ndefine %s %s (%s) {",llvm_method_type,llvm_method_name,llvm_method_args);
+    CODE = String.format("\n\ndefine %s %s (%s) {\n %s",llvm_method_type,llvm_method_name,llvm_method_args,llvm_args_alloc);
 
     BUFFER += CODE;
   }

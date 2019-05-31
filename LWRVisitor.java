@@ -67,6 +67,16 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return "generated ClassExtendsDeclaration";
   }
 
+  // Visit var declaration
+  public String visit(VarDeclaration n,String argu){
+    System.out.println("We are in VarDeclaration");
+    String vartype = n.f0.accept(this,null); // get var type
+    String varname = n.f1.accept(this,null); // get var name
+    L.Emit_VarDeclaration(vartype,varname);
+
+    return "generated VarDeclaration";
+  }
+
   // Visit method declaration
   public String visit(MethodDeclaration n, String argu){
     //System.out.println("We are in Method Declaration");
@@ -85,6 +95,21 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
     L.Emit_RBRACK();
     return "generated MethodDeclaration";
+  }
+
+  // Visit integer type
+  public String visit(IntegerType n, String argu) {
+     return n.f0.toString();
+  }
+
+  // Visit int array type
+  public String visit(ArrayType n, String argu) {
+    return "int array";
+  }
+
+  // Visit boolean type
+  public String visit(BooleanType n, String argu){
+    return n.f0.toString();
   }
 
   // Visit identifier

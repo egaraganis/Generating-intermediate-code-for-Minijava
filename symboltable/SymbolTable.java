@@ -37,6 +37,40 @@ public class SymbolTable {
     classes_data.put(className,classInfo);
   }
 
+  // Return variable's type that have been declared to an ancestor
+  public String SearchAncestors(String className,String var){
+    String superclass = classes_data.get(className).extendsFrom;
+    while(superclass != ""){
+      String type = classes_data.get(superclass).class_variables_data.get(var);
+      if(type != null)
+        return type;
+      superclass = classes_data.get(superclass).extendsFrom;
+    }
+    return "";
+  }
+
+  // Return given variable's type
+  public String GetVarType(String var,String currentClass,String currentMethod){
+    String typeGotFromField,typeGotFromMethodVar,typeGotFromMethodArg,typeGotFromSuperField=null;
+    if(currentMethod != ""){
+      typeGotFromMethodVar = classes_data.get(currentClass).methods_data.get(currentMethod).method_variables_data.get(var);
+      if(typeGotFromMethodVar != null)
+      return typeGotFromMethodVar;
+
+      typeGotFromMethodArg = classes_data.get(currentClass).methods_data.get(currentMethod).arguments_data.get(var);
+      if(typeGotFromMethodArg != null)
+      return typeGotFromMethodArg;
+    }
+    typeGotFromField = classes_data.get(currentClass).class_variables_data.get(var);
+    if(typeGotFromField != null)
+      return typeGotFromField;
+
+    typeGotFromSuperField = SearchAncestors(currentClass,var);
+    if(typeGotFromSuperField != "")
+      return typeGotFromSuperField;
+    return "error";
+  }
+
   // List all classes in symbol table
   public void ListClasses(){
     System.out.println("Symbol Table contains the following classes:");

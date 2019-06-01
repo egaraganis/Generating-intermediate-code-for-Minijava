@@ -7,6 +7,7 @@ public class Lowering {
   String currentMethod = "";
   String BUFFER = "";
   SymbolTable ST;
+  int REG_NUM = 0;
 
   // Constructor
   public Lowering(SymbolTable symbolTable){
@@ -20,6 +21,29 @@ public class Lowering {
 
   public void SetCurrentClass(String curClass){
     currentClass = curClass;
+  }
+
+  // Getters
+  public String GetCurrentClass(){
+    return currentClass;
+  }
+
+  public String GetCurrentMethod(){
+    return currentMethod;
+  }
+
+  // Get a new temp register
+  public String new_temp(){
+    String new_reg = "%_" + REG_NUM;
+    REG_NUM++;
+    return new_reg;
+  }
+
+  // Get a new label
+  public String new_label(){
+    String new_label = "%_" + REG_NUM;
+    REG_NUM++;
+    return new_label;
   }
 
   // Print current class and current method
@@ -117,7 +141,7 @@ public class Lowering {
 
   // Emit Main Method LLVM code
   public void Emit_MainMethodDefinition(){
-    String CODE = "\n\ndefine i32 @main() {";
+    String CODE = "\n\ndefine i32 @main() {\n";
 
     BUFFER += CODE;
   }
@@ -159,6 +183,115 @@ public class Lowering {
     CODE = String.format("\n\ndefine %s %s (%s) {\n %s",llvm_method_type,llvm_method_name,llvm_method_args,llvm_args_alloc);
 
     BUFFER += CODE;
+  }
+
+  // Emit a load llvm instruction that is going to be used in a primary expression
+  public String Emit_LoadIdentifierForAPrimaryExpr(String identifier){
+    String CODE;
+    String identifierType = ST.GetVarType(identifier,currentClass,currentMethod);
+    String new_reg = new_temp();
+    String llvm_type = LLVM_type(identifierType);
+    CODE = "\t" + new_reg + " = load " + llvm_type + ", " + llvm_type + "* %" + identifier + "\n";
+    // Append to buffer
+    BUFFER += CODE;
+    return new_reg;
+  }
+
+  // Emit calloc and llvm instructions so that a new object cant be created
+  public String Emit_AllocationExpressionForAPrimaryExpr(String object){
+    String CODE = "";
+    String vtable_pointer = new_temp();
+    String calloc = "\t" + vtable_pointer + " = call i8* @calloc(i32 1, i32 8)\n";
+    String casted_pointer = new_temp();
+    String bitcast = "\t" + casted_pointer + " = bitcast i8* " + vtable_pointer + " to i8***\n";
+    int vtable_sz = ST.classes_data.get(object).methods_data.size();
+    String elementptr = new_temp();
+    String getelementptr = "\t" + elementptr + " = getelementptr [" + vtable_sz + " x i8*], [" + vtable_sz + " x i8*]* " + "@." + object + "_vtable, i32 0,i32 0\n";
+    String store = "\tstore i8** " + elementptr + ", i8*** " + casted_pointer + "\n";
+    CODE += calloc + bitcast + getelementptr + store;
+    //Append to buffer
+    BUFFER += CODE;
+    return vtable_pointer;
+  }
+
+  // Emit function call before arguments
+  public String Emit_FunctionCall(String callFrom,String method,String addressIndex_inVT){
+    String CODE = "";
+    String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
+    // Object position in V-table
+    String position = "0";
+    String funcPos_InVT = "\t;" + callFrom + "." + method + " : " + position + "\n";
+    // Bitcast allocated pointer
+    String castAlloced_Reg = new_temp();
+    String bitcast = "\t" + castAlloced_Reg + " = bitcast i8* " + addressIndex_inVT + " to i8***\n";
+    // Load casted register
+    String loadCast_Reg = new_temp();
+    String loadcastedRegister = "\t" + loadCast_Reg + " = load i8**, i8*** " + castAlloced_Reg + "\n";
+    // Get element pointer
+    String getElementPtr_Reg = new_temp();
+    String getelementptr = "\t" + getElementPtr_Reg + " = getelementptr i8*, i8** " + loadCast_Reg + ",i32 0\n";
+    // Load element
+    String loadElement_Reg = new_temp();
+    String loadelementRegister = "\t" + loadElement_Reg + " = load i8*, i8** " + getElementPtr_Reg + "\n";
+    // Bitcast element so that we can call
+    String castToCall_Reg = new_temp();
+    String bitcastToCall = "\t" + castToCall_Reg + " = bitcast i8* " + loadElement_Reg + " to " + LLVM_type(method_type) + "(";
+    // Iterate all arguments and append the type of each argument
+    Set< Map.Entry <String,String> > st = ST.classes_data.get(callFrom).methods_data.get(method).arguments_data.entrySet();
+    String llvm_argsType = "i8*";
+    for (Map.Entry<String,String> cur:st){
+       String argType = cur.getValue();
+       llvm_argsType += "," + LLVM_type(argType);
+    }
+    bitcastToCall += llvm_argsType + ")*\n";
+    // Call function and store result
+    String result_Reg = new_temp();
+    String callFunction = "\t" + result_Reg + " = call " + LLVM_type(method_type) + " " + castToCall_Reg + "(";
+    // Append to CODE
+    CODE += funcPos_InVT + bitcast + loadcastedRegister + getelementptr + loadelementRegister + bitcastToCall + callFunction;
+    // Append to BUFFER
+    BUFFER += CODE;
+    return result_Reg;
+  }
+
+  // Emit minus operation llvm code
+  public String Emit_PlusOperation(String expr1,String expr2){
+    String CODE = "";
+    String r = new_temp();
+    CODE += "\t" + r + " = add i32 " + expr1 + "," + expr2 + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return r;
+  }
+
+  // Emit minus operation llvm code
+  public String Emit_MinusOperation(String expr1,String expr2){
+    String CODE = "";
+    String r = new_temp();
+    CODE += "\t" + r + " = sub i32 " + expr1 + "," + expr2 + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return r;
+  }
+
+  // Emit times operation llvm code
+  public String Emit_TimesOperation(String expr1,String expr2){
+    String CODE = "";
+    String r = new_temp();
+    CODE += "\t" + r + " = mul i32 " + expr1 + "," + expr2 + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return r;
+  }
+
+  // Emit compare operation llvm
+  public String Emit_CompareOperation(String expr1,String expr2){
+    String CODE = "";
+    String r = new_temp();
+    CODE += "\t" + r + " = icmp slt i32 " + expr1 + "," + expr2 + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return r;
   }
 
   // Log BUFFER

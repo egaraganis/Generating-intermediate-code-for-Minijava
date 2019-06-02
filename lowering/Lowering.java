@@ -18,7 +18,6 @@ public class Lowering {
   public void SetCurrentMethod(String curMethod){
     currentMethod = curMethod;
   }
-
   public void SetCurrentClass(String curClass){
     currentClass = curClass;
   }
@@ -27,11 +26,9 @@ public class Lowering {
   public String GetCurrentClass(){
     return currentClass;
   }
-
   public String GetCurrentMethod(){
     return currentMethod;
   }
-
   public SymbolTable GetSymbolTable(){
     return ST;
   }
@@ -215,7 +212,10 @@ public class Lowering {
   public String Emit_AllocationExpressionForAPrimaryExpr(String object){
     String CODE = "";
     String vtable_pointer = new_temp();
-    String calloc = "\t" + vtable_pointer + " = call i8* @calloc(i32 1, i32 8)\n";
+    int objectSizeInt = ST.classes_data.get(object).ClassSize + 8;
+    String objectSize = Integer.toString(objectSizeInt);
+    String calloc = "\t" + vtable_pointer + " = call i8* @calloc(i32 1, i32 " + objectSize +
+     ")\n";
     String casted_pointer = new_temp();
     String bitcast = "\t" + casted_pointer + " = bitcast i8* " + vtable_pointer + " to i8***\n";
     int vtable_sz = ST.classes_data.get(object).methods_data.size();
@@ -233,7 +233,15 @@ public class Lowering {
     String CODE = "";
     String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
     // Object position in V-table
-    String position = "0";
+    int positionInt = 0;
+    // find elements position in vtable
+    Set< Map.Entry <String,MethodInfo> > st_pos = ST.classes_data.get(callFrom).methods_data.entrySet();
+    for (Map.Entry<String,MethodInfo> cur:st_pos){
+      if(cur.getKey().equals(method))
+        break;
+      positionInt++;
+    }
+    String position = Integer.toString(positionInt);
     String funcPos_InVT = "\t;" + callFrom + "." + method + " : " + position + "\n";
     // Bitcast allocated pointer
     String castAlloced_Reg = new_temp();

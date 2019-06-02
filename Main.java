@@ -49,6 +49,5 @@ class Main {
         }
       }
     }
-    // Number of files passed
   }
 }

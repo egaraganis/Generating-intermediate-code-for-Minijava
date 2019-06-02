@@ -49,34 +49,29 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return L;
   }
 
-  // Visit main method
+  // Visit main method declaration
   public String visit(MainClass n,String argu){
     //System.out.println("We are in Main Class Declaration");
     String MainClassName = n.f1.accept(this,null);
     String MainName = "main";
     L.SetCurrentMethod(MainName);
     L.SetCurrentClass(MainClassName);
-    L.Emit_MainMethodDefinition();
-    // Visit VarDeclaration
-    n.f14.accept(this,argu);
-    // Visit Statement
-    n.f15.accept(this,null);
-
-    L.Emit_MainReturn();
-    L.Emit_RBRACK();
-
+    L.Emit_MainMethodDefinition(); // Emit code for the main method declaratio
+    n.f14.accept(this,argu); // Visit VarDeclaration
+    n.f15.accept(this,null); // Visit Statement
+    L.Emit_MainReturn(); // Emit code for main return value
+    L.Emit_RBRACK(); // Emit a closing bracket
     return "generated MainClass";
   }
 
   // Visit class declaration
   public String visit(ClassDeclaration n,String argu){
+    //System.out.println("We are in Class Declaration");
     String className = n.f1.accept(this,null);
     L.SetCurrentMethod("");
     L.SetCurrentClass(className);
-    // Visit VarDeclaration
-    n.f3.accept(this,null);
-    // Visit MethodDeclaration
-    n.f4.accept(this,null);
+    n.f3.accept(this,null); // Visit VarDeclaration
+    n.f4.accept(this,null); // Visit MethodDeclaration
     return "generated ClassDeclaration";
   }
 
@@ -86,10 +81,8 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     String className = n.f1.accept(this,null);
     L.SetCurrentMethod("");
     L.SetCurrentClass(className);
-    // Visit VarDeclaration
-    n.f5.accept(this,null);
-    // Visit MethodDeclaration
-    n.f6.accept(this,null);
+    n.f5.accept(this,null); // Visit VarDeclaration
+    n.f6.accept(this,null); // Visit MethodDeclaration
     return "generated ClassExtendsDeclaration";
   }
 
@@ -105,21 +98,17 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   // Visit method declaration
   public String visit(MethodDeclaration n, String argu){
     //System.out.println("We are in Method Declaration");
-    String MethodName = n.f2.accept(this,null);
+    String MethodName = n.f2.accept(this,null); // Visit identifier for method's name
     L.SetCurrentMethod(MethodName);
-    // Add LLVM method definition
-    L.Emit_MethodDefinition(MethodName);
-    // Visit VarDeclaration
-    n.f7.accept(this,null);
-    // Visit Statement
-    n.f8.accept(this,null);
-    // Visit Return Expression
-    String returnType_Expr = n.f10.accept(this,null);
-    String retType = GetType(returnType_Expr);
+    L.Emit_MethodDefinition(MethodName); // Add LLVM method definition
+    n.f7.accept(this,null); // Visit VarDeclaration
+    n.f8.accept(this,null); // Visit Statement
+    String returnType_Expr = n.f10.accept(this,null); // Visit Return Expression
+    String retType = GetType(returnType_Expr); // get the return type
     if(returnType_Expr.matches("-?\\d+"))
-      retType = "i32";
-    L.Emit_MethodReturn(retType,GetReg(returnType_Expr));
-    L.Emit_RBRACK();
+      retType = "i32"; // if return is an integer then set up llvm type for ints
+    L.Emit_MethodReturn(retType,GetReg(returnType_Expr)); // emit llvm code for method return operation
+    L.Emit_RBRACK(); // Emit closing bracket
     return "generated MethodDeclaration";
   }
 
@@ -127,17 +116,14 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   public String visit(MessageSend n,String argu){
     //System.out.println("We are in MessageSend");
     stacked_args.push(new ArrayList<String>());
-    // Get primary expression of the caller
-    String callFrom_primaryExpr = n.f0.accept(this,null);
-    String callFrom = GetType(callFrom_primaryExpr);
-    String callerReg = GetReg(callFrom_primaryExpr);
+    String callFrom_primaryExpr = n.f0.accept(this,null); // Get primary expression of the caller
+    String callFrom = GetType(callFrom_primaryExpr); // Get the object that calls the method
+    String callerReg = GetReg(callFrom_primaryExpr); // Get the register that holds object's position
     if(callFrom.equals("this"))
       callFrom = L.GetCurrentClass();
-    // Get the identifier, the method
-    String method = n.f2.accept(this,null);
-    String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callerReg);
-    // expression list will return
-    String arguments_llvm = n.f4.accept(this,null);
+    String method = n.f2.accept(this,null); // Get the identifier aka the method
+    String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callerReg); // Emit the function call
+    String arguments_llvm = n.f4.accept(this,null); // Visit expression list aka the arguments of calling fun
     String result = L.Emit_ResultingCall(callFrom,method,bitcastedReg,callerReg,stacked_args.pop());
     return result;
   }
@@ -145,17 +131,16 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   // Visit expression list
   public String visit(ExpressionList n, String argu){
     //System.out.println("We are in ExpressionList");
-    String firstParameter_PrimaryExpr = n.f0.accept(this,argu);
+    String firstParameter_PrimaryExpr = n.f0.accept(this,argu); // Visit expression
     stacked_args.peek().add(GetReg(firstParameter_PrimaryExpr));
-    // Visit ExpressionTail
-    n.f1.accept(this,null);
+    n.f1.accept(this,null); // Visit ExpressionTail
     return "generated expressionlistvisited";
   }
 
   // Visit expression term
   public String visit(ExpressionTerm n, String argu){
     //System.out.println("We are in ExpressionTerm");
-    String anotherParameter_PrimaryExpr = n.f1.accept(this,null);
+    String anotherParameter_PrimaryExpr = n.f1.accept(this,null); // Visit expression
     stacked_args.peek().add(GetReg(anotherParameter_PrimaryExpr));
     return "ExpressionTermvisited";
   }
@@ -163,19 +148,17 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   // Visit assignment statement
   public String visit(AssignmentStatement n,String argu){
     //System.out.println("We are in AssignmentStatement");
-    // Visit Identifier
-    String Dest = n.f0.accept(this,null);
-    // Visit Expression
-    String toAssign_Expression = n.f2.accept(this,null);
-    L.Emit_AssignmentStatement(Dest,GetReg(toAssign_Expression));
+    String Dest = n.f0.accept(this,null); // Visit Identifier
+    String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
+    L.Emit_AssignmentStatement(Dest,GetReg(toAssign_Expression)); // Emit code for the assignment operation
     return "generated AssignmentStatementVisited";
   }
 
   // Visit print statement
   public String visit(PrintStatement n, String argu){
     //System.out.println("We are in PrintStatement");
-    String toPrint_PrimaryExpr = n.f2.accept(this, argu);
-    L.Emit_PrintOperation(GetReg(toPrint_PrimaryExpr));
+    String toPrint_PrimaryExpr = n.f2.accept(this, argu); // visit experssion
+    L.Emit_PrintOperation(GetReg(toPrint_PrimaryExpr)); // emit llvm code for the print statement
     return "generated PrintStatementVisited";
   }
 
@@ -190,8 +173,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     String left_PrimaryExpr,right_PrimaryExpr;
     left_PrimaryExpr = n.f0.accept(this,null);
     right_PrimaryExpr = n.f2.accept(this,null);
-    // Emit addition
-    String result = L.Emit_PlusOperation(GetReg(left_PrimaryExpr),GetReg(right_PrimaryExpr));
+    String result = L.Emit_PlusOperation(GetReg(left_PrimaryExpr),GetReg(right_PrimaryExpr)); // Emit addition
     return result;
   }
 

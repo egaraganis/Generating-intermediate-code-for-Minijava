@@ -408,7 +408,8 @@ public class TypeCheck {
           size = 1;
         else
           size = 8;
-        //`Syste`m.out.println("\t\t\t     " + thisClass + "." + thisField + " : " + VarCounter);
+        //System.out.println("\t\t\t     " + thisClass + "." + thisField + " : " + VarCounter);
+        ST.classes_data.get(thisClass).ClassSize += size; // Increase class size
         VarCounter += size;
       }
       // for every method in class, calculate the offset

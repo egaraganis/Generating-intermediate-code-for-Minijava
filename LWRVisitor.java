@@ -8,11 +8,14 @@ import lowering.*;
 public class LWRVisitor extends GJDepthFirst <String,String> {
   String Output;
   Lowering L;
+  Stack <ArrayList<String>> stacked_args; // stack method calling arguments
 
   // Lowering visitor's constructor
   LWRVisitor(String Input,SymbolTable symbolTable){
     Output = Input.replaceAll("java","ll");
     System.out.println("\n\nGenerated Code Will reside " + Output + "\n");
+    // Create the stack of arguments
+    stacked_args = new Stack <ArrayList<String>>() ;
     // Create the lowering class
     L = new Lowering(symbolTable);
     // Create the V-Tables for each class
@@ -27,7 +30,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   }
 
   // Visit main method
-  public String visit(MainClass n,String argu) {
+  public String visit(MainClass n,String argu){
     //System.out.println("We are in Main Class Declaration");
     String MainClassName = n.f1.accept(this,null);
     String MainName = "main";
@@ -44,7 +47,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   }
 
   // Visit class declaration
-  public String visit(ClassDeclaration n,String argu) {
+  public String visit(ClassDeclaration n,String argu){
     String className = n.f1.accept(this,null);
     L.SetCurrentMethod("");
     L.SetCurrentClass(className);
@@ -56,7 +59,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   }
 
   // Visit class extends declaration
-  public String visit(ClassExtendsDeclaration n,String argu) {
+  public String visit(ClassExtendsDeclaration n,String argu){
     //System.out.println("We are in ClassExtends Declaration");
     String className = n.f1.accept(this,null);
     L.SetCurrentMethod("");
@@ -97,16 +100,36 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   // Visit message send
   public String visit(MessageSend n,String argu){
     //System.out.println("We are in MessageSend");
+    stacked_args.push(new ArrayList<String>());
     // Get primary expression of the caller
     String callFrom = n.f0.accept(this,null);
     if(callFrom.equals("this"))
       callFrom = L.GetCurrentClass();
     // Get the identifier, the method
     String method = n.f2.accept(this,null);
-    String result = L.Emit_FunctionCall(callFrom,method,callFrom);
+    String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callFrom);
     // expression list will return
-    n.f4.accept(this,null);
+    String arguments_llvm = n.f4.accept(this,null);
+    String result = L.Emit_ResultingCall(callFrom,method,bitcastedReg,stacked_args.pop());
     return result;
+  }
+
+  // Visit expression list
+  public String visit(ExpressionList n, String argu){
+    //System.out.println("We are in ExpressionList");
+    String firstParameter = n.f0.accept(this,argu);
+    stacked_args.peek().add(firstParameter);
+    // Visit ExpressionTail
+    n.f1.accept(this,null);
+    return "generated expressionlistvisited";
+  }
+
+  // Visit expression term
+  public String visit(ExpressionTerm n, String argu){
+    //System.out.println("We are in ExpressionTerm");
+    String anotherParameter = n.f1.accept(this,null);
+    stacked_args.peek().add(anotherParameter);
+    return "ExpressionTermvisited";
   }
 
   // Visit expression
@@ -182,32 +205,32 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   }
 
   // Visit integer literal
-  public String visit(IntegerLiteral n, String argu) {
+  public String visit(IntegerLiteral n, String argu){
      return n.f0.toString();
   }
 
   // Visit true literal
-  public String visit(TrueLiteral n, String argu) {
+  public String visit(TrueLiteral n, String argu){
      return "true";
   }
 
   // Visit false literal
-  public String visit(FalseLiteral n, String argu) {
+  public String visit(FalseLiteral n, String argu){
      return "false";
   }
 
   // Visit identifier
-  public String visit(Identifier n, String argu) {
+  public String visit(Identifier n, String argu){
      return n.f0.toString();
   }
 
   // Visit this expression
-  public String visit(ThisExpression n, String argu) {
+  public String visit(ThisExpression n, String argu){
    return "this";
   }
 
   // Visit array allocation expression
-  public String visit(ArrayAllocationExpression n, String argu) {
+  public String visit(ArrayAllocationExpression n, String argu){
     String typeOfArraySize = n.f3.accept(this,null);
     return "int array";
   }
@@ -221,12 +244,12 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   }
 
   // Visit integer type
-  public String visit(IntegerType n, String argu) {
+  public String visit(IntegerType n, String argu){
      return n.f0.toString();
   }
 
   // Visit int array
-  public String visit(ArrayType n, String argu) {
+  public String visit(ArrayType n, String argu){
     return "int array";
   }
 
@@ -236,7 +259,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   }
 
   // Visit bracket expression
-  public String visit(BracketExpression n, String argu) {
+  public String visit(BracketExpression n, String argu){
     return n.f1.accept(this,null);
   }
 }

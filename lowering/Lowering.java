@@ -162,7 +162,8 @@ public class Lowering {
   // Emit Method Definition LLVM code
   public void Emit_MethodDefinition(String methodName){
     String CODE = "";
-
+    // Reset reg
+    REG_NUM = 0;
     MethodInfo method_data = ST.classes_data.get(currentClass).methods_data.get(methodName);
     // Get method type in llvm
     String llvm_method_type = LLVM_type(method_data.type);
@@ -181,7 +182,7 @@ public class Lowering {
       llvm_args_alloc += ", " + llvm_arg_type + "* " + "%" + argName + "\n";
     }
     CODE = String.format("\n\ndefine %s %s (%s) {\n %s",llvm_method_type,llvm_method_name,llvm_method_args,llvm_args_alloc);
-
+    // Append code to buffer
     BUFFER += CODE;
   }
 
@@ -244,14 +245,35 @@ public class Lowering {
        llvm_argsType += "," + LLVM_type(argType);
     }
     bitcastToCall += llvm_argsType + ")*\n";
-    // Call function and store result
-    String result_Reg = new_temp();
-    String callFunction = "\t" + result_Reg + " = call " + LLVM_type(method_type) + " " + castToCall_Reg + "(";
     // Append to CODE
-    CODE += funcPos_InVT + bitcast + loadcastedRegister + getelementptr + loadelementRegister + bitcastToCall + callFunction;
+    CODE += funcPos_InVT + bitcast + loadcastedRegister + getelementptr + loadelementRegister + bitcastToCall;
     // Append to BUFFER
     BUFFER += CODE;
-    return result_Reg;
+    return castToCall_Reg;
+  }
+
+  // Emit the code that actually calls the method and return result
+  public String Emit_ResultingCall(String callFrom,String method,String castToCall_Reg,ArrayList arguments){
+    String CODE = "";
+    String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
+    // Call function and store result
+   String result_Reg = new_temp();
+   String callFunction = "\t" + result_Reg + " = call " + LLVM_type(method_type) + " " + castToCall_Reg + "(";
+   // Append llvm arguments code
+   String args_llvm = "i8* %this";
+   // Iterate all arguments and append the type of each argument
+   int i=0;
+   Set<Map.Entry <String,String>> st = ST.classes_data.get(callFrom).methods_data.get(method).arguments_data.entrySet();
+   for (Map.Entry<String,String> cur:st){
+      String argType = cur.getValue();
+      args_llvm += "," + LLVM_type(argType) + " " + arguments.get(i);
+      i++;
+   }
+   args_llvm += ")\n";
+   CODE += callFunction + args_llvm;
+   // Append code to buffer
+   BUFFER += CODE;
+   return result_Reg;
   }
 
   // Emit minus operation llvm code

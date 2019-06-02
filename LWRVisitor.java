@@ -10,6 +10,26 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   Lowering L;
   Stack <ArrayList<String>> stacked_args; // stack method calling arguments
 
+  // Helper function to get register from emit method
+  private String GetReg(String expression_result){
+    if(expression_result.contains(",")){
+      String[] result = expression_result.split(",");
+      return result[0];
+    }
+    else
+      return expression_result;
+  }
+
+  // Helper function to get type from emit method
+  private String GetType(String expression_result){
+    if(expression_result.contains(",")){
+      String[] result = expression_result.split(",");
+      return result[1];
+    }
+    else
+      return expression_result;
+  }
+
   // Lowering visitor's constructor
   LWRVisitor(String Input,SymbolTable symbolTable){
     Output = Input.replaceAll("java","ll");
@@ -41,6 +61,8 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     n.f14.accept(this,argu);
     // Visit Statement
     n.f15.accept(this,null);
+
+    L.Emit_MainReturn();
     L.Emit_RBRACK();
 
     return "generated MainClass";
@@ -92,7 +114,11 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     // Visit Statement
     n.f8.accept(this,null);
     // Visit Return Expression
-    String returnType = n.f10.accept(this,null);
+    String returnType_Expr = n.f10.accept(this,null);
+    String retType = GetType(returnType_Expr);
+    if(returnType_Expr.matches("-?\\d+"))
+      retType = "i32";
+    L.Emit_MethodReturn(retType,GetReg(returnType_Expr));
     L.Emit_RBRACK();
     return "generated MethodDeclaration";
   }
@@ -102,23 +128,25 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     //System.out.println("We are in MessageSend");
     stacked_args.push(new ArrayList<String>());
     // Get primary expression of the caller
-    String callFrom = n.f0.accept(this,null);
+    String callFrom_primaryExpr = n.f0.accept(this,null);
+    String callFrom = GetType(callFrom_primaryExpr);
+    String callerReg = GetReg(callFrom_primaryExpr);
     if(callFrom.equals("this"))
       callFrom = L.GetCurrentClass();
     // Get the identifier, the method
     String method = n.f2.accept(this,null);
-    String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callFrom);
+    String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callerReg);
     // expression list will return
     String arguments_llvm = n.f4.accept(this,null);
-    String result = L.Emit_ResultingCall(callFrom,method,bitcastedReg,stacked_args.pop());
+    String result = L.Emit_ResultingCall(callFrom,method,bitcastedReg,callerReg,stacked_args.pop());
     return result;
   }
 
   // Visit expression list
   public String visit(ExpressionList n, String argu){
     //System.out.println("We are in ExpressionList");
-    String firstParameter = n.f0.accept(this,argu);
-    stacked_args.peek().add(firstParameter);
+    String firstParameter_PrimaryExpr = n.f0.accept(this,argu);
+    stacked_args.peek().add(GetReg(firstParameter_PrimaryExpr));
     // Visit ExpressionTail
     n.f1.accept(this,null);
     return "generated expressionlistvisited";
@@ -127,9 +155,28 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   // Visit expression term
   public String visit(ExpressionTerm n, String argu){
     //System.out.println("We are in ExpressionTerm");
-    String anotherParameter = n.f1.accept(this,null);
-    stacked_args.peek().add(anotherParameter);
+    String anotherParameter_PrimaryExpr = n.f1.accept(this,null);
+    stacked_args.peek().add(GetReg(anotherParameter_PrimaryExpr));
     return "ExpressionTermvisited";
+  }
+
+  // Visit assignment statement
+  public String visit(AssignmentStatement n,String argu){
+    //System.out.println("We are in AssignmentStatement");
+    // Visit Identifier
+    String Dest = n.f0.accept(this,null);
+    // Visit Expression
+    String toAssign_Expression = n.f2.accept(this,null);
+    L.Emit_AssignmentStatement(Dest,GetReg(toAssign_Expression));
+    return "generated AssignmentStatementVisited";
+  }
+
+  // Visit print statement
+  public String visit(PrintStatement n, String argu){
+    //System.out.println("We are in PrintStatement");
+    String toPrint_PrimaryExpr = n.f2.accept(this, argu);
+    L.Emit_PrintOperation(GetReg(toPrint_PrimaryExpr));
+    return "generated PrintStatementVisited";
   }
 
   // Visit expression
@@ -140,43 +187,43 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   // Visit plus expression
   public String visit(PlusExpression n,String argu){
     //System.out.println("We are in plus expression");
-    String leftPrimaryExpr,rightPrimaryExpr;
-    leftPrimaryExpr = n.f0.accept(this,null);
-    rightPrimaryExpr = n.f2.accept(this,null);
+    String left_PrimaryExpr,right_PrimaryExpr;
+    left_PrimaryExpr = n.f0.accept(this,null);
+    right_PrimaryExpr = n.f2.accept(this,null);
     // Emit addition
-    String result = L.Emit_PlusOperation(leftPrimaryExpr,rightPrimaryExpr);
+    String result = L.Emit_PlusOperation(GetReg(left_PrimaryExpr),GetReg(right_PrimaryExpr));
     return result;
   }
 
   // Visit sub expression
   public String visit(MinusExpression n,String argu){
     //System.out.println("We are in min expression");
-    String leftPrimaryExpr,rightPrimaryExpr;
-    leftPrimaryExpr = n.f0.accept(this,null);
-    rightPrimaryExpr = n.f2.accept(this,null);
+    String left_PrimaryExpr,right_PrimaryExpr;
+    left_PrimaryExpr = n.f0.accept(this,null);
+    right_PrimaryExpr = n.f2.accept(this,null);
     // Emit substraction
-    String result = L.Emit_MinusOperation(leftPrimaryExpr,rightPrimaryExpr);
+    String result = L.Emit_MinusOperation(GetReg(left_PrimaryExpr),GetReg(right_PrimaryExpr));
     return result;
   }
 
   // Visit times expression
   public String visit(TimesExpression n, String argu){
     //System.out.println("We are in TimesExpression");
-    String leftPrimaryExpr,rightPrimaryExpr;
-    leftPrimaryExpr = n.f0.accept(this,null);
-    rightPrimaryExpr = n.f2.accept(this,null);
+    String left_PrimaryExpr,right_PrimaryExpr;
+    left_PrimaryExpr = n.f0.accept(this,null);
+    right_PrimaryExpr = n.f2.accept(this,null);
     // Emit multiplication
-    String result = L.Emit_TimesOperation(leftPrimaryExpr,rightPrimaryExpr);
+    String result = L.Emit_TimesOperation(GetReg(left_PrimaryExpr),GetReg(right_PrimaryExpr));
     return result;
   }
 
   // Visit compare expression
   public String visit(CompareExpression n,String argu){
     //System.out.println("We are in CompareExpression");
-    String leftPrimaryExpr,rightPrimaryExpr;
-    leftPrimaryExpr = n.f0.accept(this,null);
-    rightPrimaryExpr = n.f2.accept(this,null);
-    String result = L.Emit_CompareOperation(leftPrimaryExpr,rightPrimaryExpr);
+    String left_PrimaryExpr,right_PrimaryExpr;
+    left_PrimaryExpr = n.f0.accept(this,null);
+    right_PrimaryExpr = n.f2.accept(this,null);
+    String result = L.Emit_CompareOperation(GetReg(left_PrimaryExpr),GetReg(right_PrimaryExpr));
     return result;
   }
 
@@ -193,14 +240,16 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     else if(primary_expr.startsWith("/")){
       String obj = primary_expr.substring(1);
       String result = L.Emit_AllocationExpressionForAPrimaryExpr(obj);
-      return obj;
+      return result + "," + obj;
     }
     else if(primary_expr.equals("this")){
       return "this";
     }
     else{
       String register = L.Emit_LoadIdentifierForAPrimaryExpr(primary_expr);
-      return register;
+      String ident_Type = L.GetSymbolTable().GetVarType(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
+      String ident_Type_LLVM = L.LLVM_type(ident_Type);
+      return register + "," + ident_Type_LLVM;
     }
   }
 

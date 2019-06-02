@@ -32,6 +32,10 @@ public class Lowering {
     return currentMethod;
   }
 
+  public SymbolTable GetSymbolTable(){
+    return ST;
+  }
+
   // Get a new temp register
   public String new_temp(){
     String new_reg = "%_" + REG_NUM;
@@ -146,6 +150,13 @@ public class Lowering {
     BUFFER += CODE;
   }
 
+  // Emit Main return llvm code
+  public void Emit_MainReturn(){
+    String CODE = "\n\tret i32 0\n";
+    // Append to buffer
+    BUFFER += CODE;
+  }
+
   // Emit closing bracket
   public void Emit_RBRACK(){
     BUFFER += "\n}";
@@ -192,7 +203,9 @@ public class Lowering {
     String identifierType = ST.GetVarType(identifier,currentClass,currentMethod);
     String new_reg = new_temp();
     String llvm_type = LLVM_type(identifierType);
-    CODE = "\t" + new_reg + " = load " + llvm_type + ", " + llvm_type + "* %" + identifier + "\n";
+    if(!(identifier.startsWith("%")))
+      identifier = "%" + identifier;
+    CODE = "\t" + new_reg + " = load " + llvm_type + ", " + llvm_type + "* " + identifier + "\n";
     // Append to buffer
     BUFFER += CODE;
     return new_reg;
@@ -224,6 +237,8 @@ public class Lowering {
     String funcPos_InVT = "\t;" + callFrom + "." + method + " : " + position + "\n";
     // Bitcast allocated pointer
     String castAlloced_Reg = new_temp();
+    if(addressIndex_inVT.equals("this"))
+      addressIndex_inVT = "%this";
     String bitcast = "\t" + castAlloced_Reg + " = bitcast i8* " + addressIndex_inVT + " to i8***\n";
     // Load casted register
     String loadCast_Reg = new_temp();
@@ -253,14 +268,16 @@ public class Lowering {
   }
 
   // Emit the code that actually calls the method and return result
-  public String Emit_ResultingCall(String callFrom,String method,String castToCall_Reg,ArrayList arguments){
+  public String Emit_ResultingCall(String callFrom,String method,String castToCall_Reg,String addressIndex_inVT,ArrayList arguments){
     String CODE = "";
     String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
     // Call function and store result
    String result_Reg = new_temp();
    String callFunction = "\t" + result_Reg + " = call " + LLVM_type(method_type) + " " + castToCall_Reg + "(";
    // Append llvm arguments code
-   String args_llvm = "i8* %this";
+   if(!(addressIndex_inVT.startsWith("%")))
+    addressIndex_inVT = "%" + addressIndex_inVT;
+   String args_llvm = "i8* " + addressIndex_inVT;
    // Iterate all arguments and append the type of each argument
    int i=0;
    Set<Map.Entry <String,String>> st = ST.classes_data.get(callFrom).methods_data.get(method).arguments_data.entrySet();
@@ -274,6 +291,13 @@ public class Lowering {
    // Append code to buffer
    BUFFER += CODE;
    return result_Reg;
+  }
+
+  // Emit return llvm code
+  public void Emit_MethodReturn(String type,String toReturn){
+    String CODE = "\n\tret " + type + " " + toReturn + "\n";
+    // Append to BUFFER
+    BUFFER += CODE;
   }
 
   // Emit minus operation llvm code
@@ -314,6 +338,22 @@ public class Lowering {
     // Append code to buffer
     BUFFER += CODE;
     return r;
+  }
+
+  // Emit print statement in llvm
+  public void Emit_PrintOperation(String toPrint){
+    String CODE = "\tcall void (i32) @print_int(i32 " + toPrint + ")\n";
+    // Append to buffer
+    BUFFER += CODE;
+  }
+
+  // Emit assign operation in llvm
+  public void Emit_AssignmentStatement(String des,String expr){
+    String CODE = "";
+    String statements_type_llvm = LLVM_type(ST.GetVarType(des,currentClass,currentMethod));
+    CODE = "\tstore " + statements_type_llvm + " " + expr + "," + statements_type_llvm + "* %" + des + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
   }
 
   // Log BUFFER

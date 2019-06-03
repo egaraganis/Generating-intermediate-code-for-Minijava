@@ -29,7 +29,11 @@ class Main {
         // Generate LLVM code - Lowering visitor
         LWRVisitor LoweringVisitor = new LWRVisitor(args[i],SymbolTablePopulator.getSymbolTable());
         root.accept(LoweringVisitor,null);
+        // Log llvm code to output
         LoweringVisitor.getL().Log_Buffer();
+        // Write llvm code to file
+        String outputFile_Name = LoweringVisitor.getOutput();
+        LoweringVisitor.getL().Write_To_File(outputFile_Name);
       }
       catch (ParseException ex) {
         System.out.println(ex.getMessage());

@@ -1,6 +1,9 @@
 package lowering;
 import symboltable.*;
 import java.util.*;
+import java.io.PrintWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
 
 public class Lowering {
   String currentClass = "";
@@ -41,8 +44,8 @@ public class Lowering {
   }
 
   // Get a new label
-  public String new_label(){
-    String new_label = "%_" + REG_NUM;
+  public String new_label(String typeOfCond){
+    String new_label = typeOfCond + REG_NUM;
     REG_NUM++;
     return new_label;
   }
@@ -242,7 +245,7 @@ public class Lowering {
       positionInt++;
     }
     String position = Integer.toString(positionInt);
-    String funcPos_InVT = "\t;" + callFrom + "." + method + " : " + position + "\n";
+    String funcPos_InVT = "\t; " + callFrom + "." + method + " : " + position + "\n";
     // Bitcast allocated pointer
     String castAlloced_Reg = new_temp();
     if(addressIndex_inVT.equals("this"))
@@ -253,7 +256,7 @@ public class Lowering {
     String loadcastedRegister = "\t" + loadCast_Reg + " = load i8**, i8*** " + castAlloced_Reg + "\n";
     // Get element pointer
     String getElementPtr_Reg = new_temp();
-    String getelementptr = "\t" + getElementPtr_Reg + " = getelementptr i8*, i8** " + loadCast_Reg + ",i32 0\n";
+    String getelementptr = "\t" + getElementPtr_Reg + " = getelementptr i8*, i8** " + loadCast_Reg + ",i32 " + position + "\n";
     // Load element
     String loadElement_Reg = new_temp();
     String loadelementRegister = "\t" + loadElement_Reg + " = load i8*, i8** " + getElementPtr_Reg + "\n";
@@ -355,6 +358,28 @@ public class Lowering {
     BUFFER += CODE;
   }
 
+  // Emit if statement llvm code , 1rst part
+  public void Emit_IfStatement(String iflbl,String elselbl,String reg){
+    String CODE = "";
+    // Emit br code
+    CODE += "\n\tbr i1 " + reg + ", label %" + iflbl + ", label %" + elselbl + "\n";
+    // Emit the label
+    CODE += iflbl + ": \n";
+    // Append code to buffer
+    BUFFER += CODE;
+  }
+
+  // Emit br to end of code, after if statement
+  public void Emit_NextStatement(String elselbl,String endlbl){
+    String CODE = "";
+    // Emit branching to end after statement
+    CODE +=  "\n\tbr label %" + endlbl + "\n";
+    // Emit code of next's statement
+    CODE += elselbl + ":\n";
+    // Append code to buffer
+    BUFFER += CODE;
+  }
+
   // Emit assign operation in llvm
   public void Emit_AssignmentStatement(String des,String expr){
     String CODE = "";
@@ -367,5 +392,18 @@ public class Lowering {
   // Log BUFFER
   public void Log_Buffer(){
     System.out.println(BUFFER);
+  }
+
+  // Write BUFFER's code to file
+  public void Write_To_File(String fileName) throws FileNotFoundException {
+    try{
+      System.out.println("\n\nWriting code to " + fileName);
+      PrintWriter out = new PrintWriter(fileName);
+      out.println(BUFFER);
+      out.close();
+    }
+    catch (FileNotFoundException ex){
+      System.out.println(ex);
+    }
   }
 }

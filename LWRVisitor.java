@@ -49,6 +49,11 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return L;
   }
 
+  // get output file name
+  public String getOutput(){
+    return Output;
+  }
+
   // Visit main method declaration
   public String visit(MainClass n,String argu){
     //System.out.println("We are in Main Class Declaration");
@@ -154,6 +159,22 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return "generated AssignmentStatementVisited";
   }
 
+  // Visit if statement
+  public String visit(IfStatement n,String argu){
+    //System.out.println("We are in IfStatement");
+    String ifLabel = L.new_label("if");
+    String elseLabel = L.new_label("if");
+    String endStatement = L.new_label("if");
+    String conditionExpr = n.f2.accept(this,null); // Visit expression
+    String condResult = GetReg(conditionExpr);
+    L.Emit_IfStatement(ifLabel,elseLabel,condResult);
+    n.f4.accept(this,null); // Visit statement of if
+    L.Emit_NextStatement(elseLabel,endStatement);
+    n.f6.accept(this,null); // Visit statement of else
+    L.Emit_NextStatement(endStatement,endStatement);
+    return "generated IfVisited";
+  }
+
   // Visit print statement
   public String visit(PrintStatement n, String argu){
     //System.out.println("We are in PrintStatement");
@@ -227,6 +248,8 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     else if(primary_expr.equals("this")){
       return "this";
     }
+    else if(primary_expr.startsWith("%"))
+      return primary_expr;
     else{
       String register = L.Emit_LoadIdentifierForAPrimaryExpr(primary_expr);
       String ident_Type = L.GetSymbolTable().GetVarType(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());

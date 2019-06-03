@@ -11,3 +11,5 @@ clean:
 	rm -f ./typecheck/*.class
 	rm -f ./lowering/*.class
 	rm -f ./StatiCheckingException/*.class
+	rm -f ./inputs/*.ll
+	rm -f ./inputs/*.out

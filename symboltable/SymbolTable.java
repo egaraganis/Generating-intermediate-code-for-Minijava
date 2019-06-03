@@ -71,6 +71,19 @@ public class SymbolTable {
     return "error";
   }
 
+  // Check if identifier is a field in class specified or to it's ancestors
+  public String IsClassField(String var,String currentClass,String currentMethod){
+    String typeGotFromField,typeGotFromSuperField;
+    typeGotFromField = classes_data.get(currentClass).class_variables_data.get(var);
+    if(typeGotFromField != null)
+      return typeGotFromField;
+
+    typeGotFromSuperField = SearchAncestors(currentClass,var);
+    if(typeGotFromSuperField != "")
+      return typeGotFromSuperField;
+    return null;
+  }
+
   // List all classes in symbol table
   public void ListClasses(){
     System.out.println("Symbol Table contains the following classes:");

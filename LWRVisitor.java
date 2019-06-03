@@ -152,10 +152,21 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit assignment statement
   public String visit(AssignmentStatement n,String argu){
-    //System.out.println("We are in AssignmentStatement");
+    System.out.println("We are in AssignmentStatement");
     String Dest = n.f0.accept(this,null); // Visit Identifier
-    String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
-    L.Emit_AssignmentStatement(Dest,GetReg(toAssign_Expression)); // Emit code for the assignment operation
+    // Check if destination is class field that we need to load
+    String typeOfField = L.GetSymbolTable().IsClassField(Dest,L.GetCurrentClass(),L.GetCurrentMethod());
+    if(typeOfField != null){
+      System.out.println("CLASS FIELD");
+      String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
+      String casted_Reg = L.Emit_LoadClassField(Dest,typeOfField); // Emit llvm code to load field
+      L.Emit_AssignmentStatement_ToClassField(GetReg(toAssign_Expression),typeOfField,casted_Reg);
+    }
+    else{
+      System.out.println("NOT CLASS FIELD");
+      String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
+      L.Emit_AssignmentStatement_ToLocalVar(Dest,GetReg(toAssign_Expression)); // Emit code for the assignment operation
+    }
     return "generated AssignmentStatementVisited";
   }
 
@@ -234,22 +245,35 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
   public String visit(PrimaryExpression n,String argu){
     //System.out.println("We are in PrimaryExpression");
     String primary_expr = n.f0.accept(this,null);
+    // If TrueLiteral return true
     if(primary_expr.equals("true"))
       return "true";
+    // If FalseLiteral return false
     else if(primary_expr.equals("false"))
       return "false";
+    // If integer return the interger
     else if(primary_expr.matches("-?\\d+"))
       return primary_expr;
+    // If new allocation expression, create object
     else if(primary_expr.startsWith("/")){
       String obj = primary_expr.substring(1);
       String result = L.Emit_AllocationExpressionForAPrimaryExpr(obj);
       return result + "," + obj;
     }
+    // If new array allocation expression, create array
+    else if(primary_expr.startsWith("[")){
+      String arrSize_reg = primary_expr.substring(1);
+      String casted_Reg  = L.Emit_ArrayAllocationExpression(GetReg(arrSize_reg));
+      return casted_Reg + "," + "i32*";
+    }
+    // If "this" expression return "this"
     else if(primary_expr.equals("this")){
       return "this";
     }
+    // If we already got the register then proceed to return to upper level
     else if(primary_expr.startsWith("%"))
       return primary_expr;
+    // If we have an identifier, load it
     else{
       String register = L.Emit_LoadIdentifierForAPrimaryExpr(primary_expr);
       String ident_Type = L.GetSymbolTable().GetVarType(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
@@ -285,8 +309,8 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit array allocation expression
   public String visit(ArrayAllocationExpression n, String argu){
-    String typeOfArraySize = n.f3.accept(this,null);
-    return "int array";
+    String typeOfArraySize = n.f3.accept(this,null); // Visit Expression
+    return "[" + typeOfArraySize; // "[" indicates that we have an array allocation expresssion
   }
 
   // Visit allocation expression

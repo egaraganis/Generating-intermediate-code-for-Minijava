@@ -231,6 +231,34 @@ public class Lowering {
     return vtable_pointer;
   }
 
+  // Emit llvm code that allocates space for an array
+  public String Emit_ArrayAllocationExpression(String arrSize_reg){
+    String CODE = "";
+    // Check if array size is negative
+    String icmp_Reg = new_temp();
+    String icmp = "\t" + icmp_Reg + " = icmp slt i32 " + arrSize_reg + ", 0\n";
+    // branch code
+    String arr_err = new_label("arr_alloc");
+    String arr_cont = new_label("arr_alloc");
+    String br = "\tbr i1 " + icmp_Reg + ", label %" + arr_err + ", label %" + arr_cont + "\n";
+    // emit code for the bad array alloc
+    String bad_alloc = "\n" + arr_err + ":\n\tcall void @throw_oob()\n\tbr label %" + arr_cont + "\n";
+    // emit code for the good array alloc
+    String add_Reg = new_temp();
+    String add = "\n" + arr_cont + ":\n\t" + add_Reg + " = add i32 " + arrSize_reg + ", 1\n";
+    String calloc_reg = new_temp();
+    String calloc = "\t" + calloc_reg + " = call i8* @calloc(i32 4, i32 " + add_Reg + ")\n";
+    String casted_Reg = new_temp();
+    String bitcast = "\t" + casted_Reg + " = bitcast i8* " + calloc_reg + " to i32*\n";
+    String store = "\tstore i32 " + arrSize_reg + ", i32* " + casted_Reg + "\n";
+    String good_alloc = add + calloc + bitcast + store;
+    // Compine code
+    CODE += icmp + br + bad_alloc + good_alloc;
+    // Append code to buffer
+    BUFFER += CODE;
+    return casted_Reg;
+  }
+
   // Emit function call before arguments
   public String Emit_FunctionCall(String callFrom,String method,String addressIndex_inVT){
     String CODE = "";
@@ -380,8 +408,33 @@ public class Lowering {
     BUFFER += CODE;
   }
 
-  // Emit assign operation in llvm
-  public void Emit_AssignmentStatement(String des,String expr){
+  // Emit llvm code to load a class' field
+  public String Emit_LoadClassField(String fieldName,String fieldType){
+    String CODE = "";
+    String positionInVT = "-1";
+    // getelementptr code
+    String fieldPointerInVt_reg = new_temp();
+    String getelementptr = "\t" + fieldPointerInVt_reg + " = getelementptr i8,i8* %this, " + LLVM_type(fieldType) + " " + positionInVT + "\n";
+    // bitcast code
+    String casted_Reg = new_temp();
+    String bitcast = "\t" + casted_Reg + " = bitcast i8* " + fieldPointerInVt_reg + " to " + LLVM_type(fieldType) + "*\n";
+    // Create the llvm code
+    CODE += getelementptr + bitcast;
+    // Append code to buffer
+    BUFFER += CODE ;
+    return casted_Reg;
+  }
+
+  // Emit assign operation in llvm to a class field
+  public void Emit_AssignmentStatement_ToClassField(String expr,String fieldType,String dest){
+    String CODE = "";
+    CODE = "\tstore " + LLVM_type(fieldType) + " " + expr + ", " + LLVM_type(fieldType) + "* " + dest + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
+  }
+
+  // Emit assign operation in llvm to a local method var
+  public void Emit_AssignmentStatement_ToLocalVar(String des,String expr){
     String CODE = "";
     String statements_type_llvm = LLVM_type(ST.GetVarType(des,currentClass,currentMethod));
     CODE = "\tstore " + statements_type_llvm + " " + expr + "," + statements_type_llvm + "* %" + des + "\n";

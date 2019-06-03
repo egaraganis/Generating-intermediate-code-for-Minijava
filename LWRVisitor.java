@@ -152,22 +152,46 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit assignment statement
   public String visit(AssignmentStatement n,String argu){
-    System.out.println("We are in AssignmentStatement");
+    //System.out.println("We are in AssignmentStatement");
     String Dest = n.f0.accept(this,null); // Visit Identifier
     // Check if destination is class field that we need to load
     String typeOfField = L.GetSymbolTable().IsClassField(Dest,L.GetCurrentClass(),L.GetCurrentMethod());
     if(typeOfField != null){
-      //System.out.println("CLASS FIELD");
+      //System.out.println("assigning to a class field");
       String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
       String casted_Reg = L.Emit_LoadClassField(Dest,typeOfField,L.GetCurrentClass()); // Emit llvm code to load field
       L.Emit_AssignmentStatement_ToClassField(GetReg(toAssign_Expression),typeOfField,casted_Reg);
     }
     else{
-      //System.out.println("NOT CLASS FIELD");
+      //System.out.println("assigning to a local var");
       String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
       L.Emit_AssignmentStatement_ToLocalVar(Dest,GetReg(toAssign_Expression)); // Emit code for the assignment operation
     }
     return "generated AssignmentStatementVisited";
+  }
+
+  // Visit array assignment statement
+  public String visit(ArrayAssignmentStatement n,String argu){
+    //System.out.println("We are in ArrayAssignmentStatement");
+    String ArrDest_Ident = n.f0.accept(this,null); // visit identifier
+    // Check if destination is class field that we need to load
+    String classField = L.GetSymbolTable().IsClassField(ArrDest_Ident,L.GetCurrentClass(),L.GetCurrentMethod());
+    if(classField != null){
+      //System.out.println("assigning to a field array");
+      String casted_Reg = L.Emit_LoadClassField(ArrDest_Ident,"int array",L.GetCurrentClass()); // Emit llvm code to load field
+      String typeOfIndex_Expr = n.f2.accept(this,null); // visit index expression
+      String typeOfExpr_Expr = n.f5.accept(this,null); // visit the value expression to be
+      L.Emit_ArrayAssignmentStatement_ToClassField(casted_Reg,GetReg(typeOfIndex_Expr),GetReg(typeOfExpr_Expr));
+    }
+    else{
+      //System.out.println("assigning to a local array");
+      String typeOfIndex_Expr = n.f2.accept(this,null); // visit index expression
+      String typeOfExpr_Expr = n.f5.accept(this,null); // visit the value expression to be
+      //L.Emit_ArrayAssignmentStatement_ToLocalVar(Dest,GetReg(toAssign_Expression)); // Emit code for the assignment operation
+    }
+    String typeOfIndex_Expr = n.f2.accept(this,null); // visit index expression
+    String typeOfExpr_Expr = n.f5.accept(this,null); // visit the value expression to be assigned
+    return "ArrayAssignmentStatementVisited";
   }
 
   // Visit if statement

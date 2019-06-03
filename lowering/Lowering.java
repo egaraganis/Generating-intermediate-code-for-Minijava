@@ -443,6 +443,34 @@ public class Lowering {
     BUFFER += CODE;
   }
 
+  // Emit array assignment operation in llvm for a class field
+  public void Emit_ArrayAssignmentStatement_ToClassField(String index_reg,String index,String toBeAssigned){
+    String CODE = "";
+    String oob_good_lbl = new_label("oob");
+    String oob_bad_lbl = new_label("oob");
+    String oob_cont_lbl = new_label("oob");
+    String load_index_reg = new_temp();
+    String load_index = "\t" + load_index_reg + " = load i32*, i32** " + index_reg + "\n";
+    String load_loaded_reg = new_temp();
+    String load_again = "\t" + load_loaded_reg + " = load i32,i32* " + load_index_reg + "\n";
+    String icmp_Reg = new_temp();
+    String icmp = "\t" + icmp_Reg + " = icmp ult i32 0, " + load_loaded_reg + "\n";
+    String br = "\tbr i1 " + icmp_Reg + ", label " + oob_good_lbl + ", label " + oob_bad_lbl + "\n";
+    String oob_good = "\n" + oob_good_lbl + ":\n";
+    String add_Reg = new_temp();
+    String add = "\t" + add_Reg + " = add i32 " + index + ",1\n";
+    String getElementPtr_Reg = new_temp();
+    String getelementptr = "\t" + getElementPtr_Reg + " = getelementptr i32, i32* " + load_index_reg + ", i32 " + add_Reg + "\n";
+    String store = "\tstore i32 " + toBeAssigned + ", i32* " + getElementPtr_Reg + "\n";
+    String br2 = "\tbr label %" + oob_cont_lbl + "\n";
+    String oob_bad = "\n" + oob_bad_lbl + ":\n\tcall void @throw_oob()\n\tbr label %" + oob_cont_lbl + "\n";
+    String oob_cont = "\n" + oob_cont_lbl + ":\n\n";
+    // Combine parts
+    CODE += load_index + load_again + icmp + br + oob_good + add + getelementptr + store + br2 + oob_bad + oob_cont;
+    // Append to buffer
+    BUFFER += CODE;
+  }
+
   // Log BUFFER
   public void Log_Buffer(){
     System.out.println(BUFFER);

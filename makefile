@@ -13,3 +13,4 @@ clean:
 	rm -f ./StatiCheckingException/*.class
 	rm -f ./inputs/*.ll
 	rm -f ./inputs/*.out
+	rm -f ./inputs/*.class

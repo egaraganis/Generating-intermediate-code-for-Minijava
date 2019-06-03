@@ -372,6 +372,9 @@ public class TypeCheck {
     for(Map.Entry <String,ClassInfo> cur:st){
       int VarCounter,MethodCounter;
       String thisClass = cur.getKey();
+      // Store offsets to symbol table
+      ST.classes_data.get(thisClass).fields_offsets = new LinkedHashMap<String,Integer>() ;
+      ST.classes_data.get(thisClass).methods_offsets = new LinkedHashMap<String,Integer>() ;
       // configure currentClass and currentMethod, so that GetVarType can search properly
       this.currentClass = thisClass;
       this.currentMethod = "";
@@ -411,6 +414,7 @@ public class TypeCheck {
         //System.out.println("\t\t\t     " + thisClass + "." + thisField + " : " + VarCounter);
         ST.classes_data.get(thisClass).ClassSize += size; // Increase class size
         VarCounter += size;
+        ST.classes_data.get(thisClass).fields_offsets.put(thisField,VarCounter - size);
       }
       // for every method in class, calculate the offset
       //System.out.println("\n\t\t\t     ---------Methods---------");
@@ -430,6 +434,7 @@ public class TypeCheck {
           continue;
         //System.out.println("\t\t\t     " + thisClass + "." + thisMethod + " : " + MethodCounter);
         MethodCounter += 8;
+        ST.classes_data.get(thisClass).fields_offsets.put(thisMethod,MethodCounter - 8);
       }
       trackClassesFields.put(thisClass,VarCounter);
       trackClassesMethods.put(thisClass,MethodCounter);

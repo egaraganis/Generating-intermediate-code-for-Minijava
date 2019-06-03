@@ -157,13 +157,13 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     // Check if destination is class field that we need to load
     String typeOfField = L.GetSymbolTable().IsClassField(Dest,L.GetCurrentClass(),L.GetCurrentMethod());
     if(typeOfField != null){
-      System.out.println("CLASS FIELD");
+      //System.out.println("CLASS FIELD");
       String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
-      String casted_Reg = L.Emit_LoadClassField(Dest,typeOfField); // Emit llvm code to load field
+      String casted_Reg = L.Emit_LoadClassField(Dest,typeOfField,L.GetCurrentClass()); // Emit llvm code to load field
       L.Emit_AssignmentStatement_ToClassField(GetReg(toAssign_Expression),typeOfField,casted_Reg);
     }
     else{
-      System.out.println("NOT CLASS FIELD");
+      //System.out.println("NOT CLASS FIELD");
       String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
       L.Emit_AssignmentStatement_ToLocalVar(Dest,GetReg(toAssign_Expression)); // Emit code for the assignment operation
     }

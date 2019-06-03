@@ -8,6 +8,8 @@ public class ClassInfo {
   public String extendsFrom=""; // inheritance relationship
   public String extendsTo=""; // inheritance relationship
   public int ClassSize = 0; // size of class based on its fields
+  public LinkedHashMap <String,Integer> fields_offsets; // <fieldName,offset in class>
+  public LinkedHashMap <String,Integer> methods_offsets; // <methodName, offset in class>
   public LinkedHashMap <String,String> class_variables_data; // [ class variable name , type  ]
   public LinkedHashMap <String,MethodInfo> methods_data; // [ class methods name , methods info ]
 

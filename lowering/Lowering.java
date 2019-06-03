@@ -409,9 +409,10 @@ public class Lowering {
   }
 
   // Emit llvm code to load a class' field
-  public String Emit_LoadClassField(String fieldName,String fieldType){
+  public String Emit_LoadClassField(String fieldName,String fieldType,String className){
     String CODE = "";
-    String positionInVT = "-1";
+    int positionInVT_int = 8 + ST.classes_data.get(className).fields_offsets.get(fieldName);
+    String positionInVT = Integer.toString(positionInVT_int);
     // getelementptr code
     String fieldPointerInVt_reg = new_temp();
     String getelementptr = "\t" + fieldPointerInVt_reg + " = getelementptr i8,i8* %this, " + LLVM_type(fieldType) + " " + positionInVT + "\n";

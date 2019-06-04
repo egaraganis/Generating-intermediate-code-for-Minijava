@@ -34,7 +34,7 @@ define i32 @main() {
 	%_7 = bitcast i8* %_6 to i32 (i8*,i32)*
 	%_8 = call i32 %_7(i8* %_0, i32 10)
 	call void (i32) @print_int(i32 %_8)
-	
+
 	ret i32 0
 }
 
@@ -42,7 +42,7 @@ define i32 @BBS.Start(i8* %this, i32 %.sz) {
 	%sz = alloca i32
 	store i32 %.sz, i32* %sz
 	%aux01 = alloca i32
-	
+
 	; BBS.Init : 3
 	%_0 = bitcast i8* %this to i8***
 	%_1 = load i8**, i8*** %_0
@@ -52,7 +52,7 @@ define i32 @BBS.Start(i8* %this, i32 %.sz) {
 	%_6 = load i32, i32* %sz
 	%_5 = call i32 %_4(i8* %this, i32 %_6)
 	store i32 %_5, i32* %aux01
-	
+
 	; BBS.Print : 2
 	%_7 = bitcast i8* %this to i8***
 	%_8 = load i8**, i8*** %_7
@@ -61,9 +61,9 @@ define i32 @BBS.Start(i8* %this, i32 %.sz) {
 	%_11 = bitcast i8* %_10 to i32 (i8*)*
 	%_12 = call i32 %_11(i8* %this)
 	store i32 %_12, i32* %aux01
-	
+
 	call void (i32) @print_int(i32 99999)
-	
+
 	; BBS.Sort : 1
 	%_13 = bitcast i8* %this to i8***
 	%_14 = load i8**, i8*** %_13
@@ -72,7 +72,7 @@ define i32 @BBS.Start(i8* %this, i32 %.sz) {
 	%_17 = bitcast i8* %_16 to i32 (i8*)*
 	%_18 = call i32 %_17(i8* %this)
 	store i32 %_18, i32* %aux01
-	
+
 	; BBS.Print : 2
 	%_19 = bitcast i8* %this to i8***
 	%_20 = load i8**, i8*** %_19
@@ -81,38 +81,38 @@ define i32 @BBS.Start(i8* %this, i32 %.sz) {
 	%_23 = bitcast i8* %_22 to i32 (i8*)*
 	%_24 = call i32 %_23(i8* %this)
 	store i32 %_24, i32* %aux01
-	
+
 	ret i32 0
 }
 
 define i32 @BBS.Sort(i8* %this) {
 	%nt = alloca i32
-	
+
 	%i = alloca i32
-	
+
 	%aux02 = alloca i32
-	
+
 	%aux04 = alloca i32
-	
+
 	%aux05 = alloca i32
-	
+
 	%aux06 = alloca i32
-	
+
 	%aux07 = alloca i32
-	
+
 	%j = alloca i32
-	
+
 	%t = alloca i32
-	
+
 	%_0 = getelementptr i8, i8* %this, i32 16
 	%_1 = bitcast i8* %_0 to i32*
 	%_2 = load i32, i32* %_1
 	%_3 = sub i32 %_2, 1
 	store i32 %_3, i32* %i
-	
+
 	%_4 = sub i32 0, 1
 	store i32 %_4, i32* %aux02
-	
+
 	br label %loop5
 
 loop5:
@@ -123,7 +123,7 @@ loop5:
 
 loop6:
 		store i32 1, i32* %j
-		
+
 		br label %loop11
 
 loop11:
@@ -137,7 +137,7 @@ loop12:
 			%_18 = load i32, i32* %j
 			%_19 = sub i32 %_18, 1
 			store i32 %_19, i32* %aux07
-			
+
 			%_29 = getelementptr i8, i8* %this, i32 8
 			%_30 = bitcast i8* %_29 to i32**
 			%_31 = load i32*, i32** %_30
@@ -158,7 +158,7 @@ oob27:
 
 oob28:
 			store i32 %_24, i32* %aux04
-			
+
 			%_42 = getelementptr i8, i8* %this, i32 8
 			%_43 = bitcast i8* %_42 to i32**
 			%_44 = load i32*, i32** %_43
@@ -179,7 +179,7 @@ oob40:
 
 oob41:
 			store i32 %_37, i32* %aux05
-			
+
 			%_49 = load i32, i32* %aux05
 			%_50 = load i32, i32* %aux04
 			%_51 = icmp slt i32 %_49, %_50
@@ -189,7 +189,7 @@ if46:
 				%_52 = load i32, i32* %j
 				%_53 = sub i32 %_52, 1
 				store i32 %_53, i32* %aux06
-				
+
 				%_63 = getelementptr i8, i8* %this, i32 8
 				%_64 = bitcast i8* %_63 to i32**
 				%_65 = load i32*, i32** %_64
@@ -210,7 +210,7 @@ oob61:
 
 oob62:
 				store i32 %_58, i32* %t
-				
+
 				%_75 = getelementptr i8, i8* %this, i32 8
 				%_76 = bitcast i8* %_75 to i32**
 				%_77 = load i32*, i32** %_76
@@ -249,7 +249,7 @@ oob73:
 				br label %oob74
 
 oob74:
-				
+
 				%_100 = getelementptr i8, i8* %this, i32 8
 				%_101 = bitcast i8* %_100 to i32**
 				%_102 = load i32*, i32** %_101
@@ -270,44 +270,44 @@ oob98:
 				br label %oob99
 
 oob99:
-				
-				
+
+
 				br label %if48
 
 if47:
 
 				store i32 0, i32* %nt
-				
+
 				br label %if48
 
 if48:
-			
+
 			%_105 = load i32, i32* %j
 			%_106 = add i32 %_105, 1
 			store i32 %_106, i32* %j
-			
-			
+
+
 			br label %loop11
 
 loop13:
-		
+
 		%_107 = load i32, i32* %i
 		%_108 = sub i32 %_107, 1
 		store i32 %_108, i32* %i
-		
-		
+
+
 		br label %loop5
 
 loop7:
-	
+
 	ret i32 0
 }
 
 define i32 @BBS.Print(i8* %this) {
 	%j = alloca i32
-	
+
 	store i32 0, i32* %j
-	
+
 	br label %loop0
 
 loop0:
@@ -339,16 +339,16 @@ oob15:
 
 oob16:
 		call void (i32) @print_int(i32 %_12)
-		
+
 		%_21 = load i32, i32* %j
 		%_22 = add i32 %_21, 1
 		store i32 %_22, i32* %j
-		
-		
+
+
 		br label %loop0
 
 loop2:
-	
+
 	ret i32 0
 }
 
@@ -359,7 +359,7 @@ define i32 @BBS.Init(i8* %this, i32 %.sz) {
 	%_1 = getelementptr i8, i8* %this, i32 16
 	%_2 = bitcast i8* %_1 to i32*
 	store i32 %_0, i32* %_2
-	
+
 	%_9 = load i32, i32* %sz
 	%_6 = icmp slt i32 %_9, 0
 	br i1 %_6, label %arr_alloc7, label %arr_alloc8
@@ -376,7 +376,7 @@ arr_alloc8:
 	%_10 = getelementptr i8, i8* %this, i32 8
 	%_11 = bitcast i8* %_10 to i32**
 	store i32* %_5, i32** %_11
-	
+
 	%_20 = getelementptr i8, i8* %this, i32 8
 	%_21 = bitcast i8* %_20 to i32**
 	%_22 = load i32*, i32** %_21
@@ -395,7 +395,7 @@ oob18:
 	br label %oob19
 
 oob19:
-	
+
 	%_31 = getelementptr i8, i8* %this, i32 8
 	%_32 = bitcast i8* %_31 to i32**
 	%_33 = load i32*, i32** %_32
@@ -414,7 +414,7 @@ oob29:
 	br label %oob30
 
 oob30:
-	
+
 	%_42 = getelementptr i8, i8* %this, i32 8
 	%_43 = bitcast i8* %_42 to i32**
 	%_44 = load i32*, i32** %_43
@@ -433,7 +433,7 @@ oob40:
 	br label %oob41
 
 oob41:
-	
+
 	%_53 = getelementptr i8, i8* %this, i32 8
 	%_54 = bitcast i8* %_53 to i32**
 	%_55 = load i32*, i32** %_54
@@ -452,7 +452,7 @@ oob51:
 	br label %oob52
 
 oob52:
-	
+
 	%_64 = getelementptr i8, i8* %this, i32 8
 	%_65 = bitcast i8* %_64 to i32**
 	%_66 = load i32*, i32** %_65
@@ -471,7 +471,7 @@ oob62:
 	br label %oob63
 
 oob63:
-	
+
 	%_75 = getelementptr i8, i8* %this, i32 8
 	%_76 = bitcast i8* %_75 to i32**
 	%_77 = load i32*, i32** %_76
@@ -490,7 +490,7 @@ oob73:
 	br label %oob74
 
 oob74:
-	
+
 	%_86 = getelementptr i8, i8* %this, i32 8
 	%_87 = bitcast i8* %_86 to i32**
 	%_88 = load i32*, i32** %_87
@@ -509,7 +509,7 @@ oob84:
 	br label %oob85
 
 oob85:
-	
+
 	%_97 = getelementptr i8, i8* %this, i32 8
 	%_98 = bitcast i8* %_97 to i32**
 	%_99 = load i32*, i32** %_98
@@ -528,7 +528,7 @@ oob95:
 	br label %oob96
 
 oob96:
-	
+
 	%_108 = getelementptr i8, i8* %this, i32 8
 	%_109 = bitcast i8* %_108 to i32**
 	%_110 = load i32*, i32** %_109
@@ -547,7 +547,7 @@ oob106:
 	br label %oob107
 
 oob107:
-	
+
 	%_119 = getelementptr i8, i8* %this, i32 8
 	%_120 = bitcast i8* %_119 to i32**
 	%_121 = load i32*, i32** %_120
@@ -566,6 +566,6 @@ oob117:
 	br label %oob118
 
 oob118:
-	
+
 	ret i32 0
 }

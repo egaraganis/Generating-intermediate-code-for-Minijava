@@ -43,7 +43,7 @@ public class SymbolTable {
     while(superclass != ""){
       String type = classes_data.get(superclass).class_variables_data.get(var);
       if(type != null)
-        return type;
+        return type + "/" + superclass; // return field's type and the class belonging to
       superclass = classes_data.get(superclass).extendsFrom;
     }
     return "";
@@ -76,7 +76,7 @@ public class SymbolTable {
     String typeGotFromField,typeGotFromSuperField;
     typeGotFromField = classes_data.get(currentClass).class_variables_data.get(var);
     if(typeGotFromField != null)
-      return typeGotFromField;
+      return typeGotFromField + "/" + currentClass; // return field's type and the class belonging to
 
     typeGotFromSuperField = SearchAncestors(currentClass,var);
     if(typeGotFromSuperField != "")

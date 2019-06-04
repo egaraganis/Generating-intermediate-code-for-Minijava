@@ -30,6 +30,18 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
       return expression_result;
   }
 
+  // Helper function to get type of class field
+  private String GetFieldType(String IsClassFieldResult){
+    String[] result = IsClassFieldResult.split("/");
+    return result[0];
+  }
+
+  // Helper function to get the class field belongs
+  private String GetFieldClass(String IsClassFieldResult){
+    String[] result = IsClassFieldResult.split("/");
+    return result[1];
+  }
+
   // Lowering visitor's constructor
   LWRVisitor(String Input,SymbolTable symbolTable){
     Output = Input.replaceAll("java","ll");
@@ -56,7 +68,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit main method declaration
   public String visit(MainClass n,String argu){
-    //System.out.println("We are in Main Class Declaration");
+    System.out.println("We are in Main Class Declaration");
     String MainClassName = n.f1.accept(this,null);
     String MainName = "main";
     L.SetCurrentMethod(MainName);
@@ -71,7 +83,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit class declaration
   public String visit(ClassDeclaration n,String argu){
-    //System.out.println("We are in Class Declaration");
+    System.out.println("We are in Class Declaration");
     String className = n.f1.accept(this,null);
     L.SetCurrentMethod("");
     L.SetCurrentClass(className);
@@ -82,7 +94,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit class extends declaration
   public String visit(ClassExtendsDeclaration n,String argu){
-    //System.out.println("We are in ClassExtends Declaration");
+    System.out.println("We are in ClassExtends Declaration");
     String className = n.f1.accept(this,null);
     L.SetCurrentMethod("");
     L.SetCurrentClass(className);
@@ -93,7 +105,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit var declaration
   public String visit(VarDeclaration n,String argu){
-    //System.out.println("We are in VarDeclaration");
+    System.out.println("We are in VarDeclaration");
     String vartype = n.f0.accept(this,null); // get var type
     String varname = n.f1.accept(this,null); // get var name
     L.Emit_VarDeclaration(vartype,varname);
@@ -102,7 +114,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit method declaration
   public String visit(MethodDeclaration n, String argu){
-    //System.out.println("We are in Method Declaration");
+    System.out.println("We are in Method Declaration");
     String MethodName = n.f2.accept(this,null); // Visit identifier for method's name
     L.SetCurrentMethod(MethodName);
     L.Emit_MethodDefinition(MethodName); // Add LLVM method definition
@@ -119,9 +131,9 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit message send
   public String visit(MessageSend n,String argu){
-    //System.out.println("We are in MessageSend");
+    System.out.println("We are in MessageSend");
     stacked_args.push(new ArrayList<String>());
-    String callFrom_primaryExpr = n.f0.accept(this,null); // Get primary expression of the caller
+    String callFrom_primaryExpr = n.f0.accept(this,"getobj"); // Get primary expression of the caller
     String callFrom = GetType(callFrom_primaryExpr); // Get the object that calls the method
     String callerReg = GetReg(callFrom_primaryExpr); // Get the register that holds object's position
     if(callFrom.equals("this"))
@@ -130,12 +142,12 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callerReg); // Emit the function call
     String arguments_llvm = n.f4.accept(this,null); // Visit expression list aka the arguments of calling fun
     String result = L.Emit_ResultingCall(callFrom,method,bitcastedReg,callerReg,stacked_args.pop());
-    return result;
+    return result + "," + callFrom;
   }
 
   // Visit expression list
   public String visit(ExpressionList n, String argu){
-    //System.out.println("We are in ExpressionList");
+    System.out.println("We are in ExpressionList");
     String firstParameter_PrimaryExpr = n.f0.accept(this,argu); // Visit expression
     stacked_args.peek().add(GetReg(firstParameter_PrimaryExpr));
     n.f1.accept(this,null); // Visit ExpressionTail
@@ -144,7 +156,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit expression term
   public String visit(ExpressionTerm n, String argu){
-    //System.out.println("We are in ExpressionTerm");
+    System.out.println("We are in ExpressionTerm");
     String anotherParameter_PrimaryExpr = n.f1.accept(this,null); // Visit expression
     stacked_args.peek().add(GetReg(anotherParameter_PrimaryExpr));
     return "ExpressionTermvisited";
@@ -152,15 +164,16 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit assignment statement
   public String visit(AssignmentStatement n,String argu){
-    //System.out.println("We are in AssignmentStatement");
+    System.out.println("We are in AssignmentStatement");
     String Dest = n.f0.accept(this,null); // Visit Identifier
     // Check if destination is class field that we need to load
     String typeOfField = L.GetSymbolTable().IsClassField(Dest,L.GetCurrentClass(),L.GetCurrentMethod());
+    System.out.println("We are in assignment statement checking if call from is a class field " + Dest + "->" + typeOfField);
     if(typeOfField != null){
       //System.out.println("assigning to a class field");
       String toAssign_Expression = n.f2.accept(this,null); // Visit Expression
-      String casted_Reg = L.Emit_LoadClassField(Dest,typeOfField,L.GetCurrentClass()); // Emit llvm code to load field
-      L.Emit_AssignmentStatement_ToClassField(GetReg(toAssign_Expression),typeOfField,casted_Reg);
+      String casted_Reg = L.Emit_LoadClassField(Dest,GetFieldType(typeOfField),GetFieldClass(typeOfField)); // Emit llvm code to load field
+      L.Emit_AssignmentStatement_ToClassField(GetReg(toAssign_Expression),GetFieldType(typeOfField),casted_Reg);
     }
     else{
       //System.out.println("assigning to a local var");
@@ -172,13 +185,13 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit array assignment statement
   public String visit(ArrayAssignmentStatement n,String argu){
-    //System.out.println("We are in ArrayAssignmentStatement");
+    System.out.println("We are in ArrayAssignmentStatement");
     String ArrDest_Ident = n.f0.accept(this,null); // visit identifier
     // Check if destination is class field that we need to load
     String classField = L.GetSymbolTable().IsClassField(ArrDest_Ident,L.GetCurrentClass(),L.GetCurrentMethod());
     if(classField != null){
       //System.out.println("assigning to a field array");
-      String casted_Reg = L.Emit_LoadClassField(ArrDest_Ident,"int array",L.GetCurrentClass()); // Emit llvm code to load field
+      String casted_Reg = L.Emit_LoadClassField(ArrDest_Ident,"int array",GetFieldClass(classField)); // Emit llvm code to load field
       String typeOfIndex_Expr = n.f2.accept(this,null); // visit index expression
       String typeOfExpr_Expr = n.f5.accept(this,null); // visit the value expression to be
       L.Emit_ArrayAssignmentStatement_ToClassField(casted_Reg,GetReg(typeOfIndex_Expr),GetReg(typeOfExpr_Expr));
@@ -196,7 +209,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit if statement
   public String visit(IfStatement n,String argu){
-    //System.out.println("We are in IfStatement");
+    System.out.println("We are in IfStatement");
     String ifLabel = L.new_label("if");
     String elseLabel = L.new_label("if");
     String endStatement = L.new_label("if");
@@ -212,7 +225,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit while statement
   public String visit(WhileStatement n, String argu){
-    //System.out.println("We are in WhileStatement");
+    System.out.println("We are in WhileStatement");
     String start_label = L.Emit_WhileStatement_StartOfLoop();
     String condition_Expr = n.f2.accept(this,null); // Visit expression
     String end_label = L.Emit_WhileStatement_AfterCondition(GetReg(condition_Expr));
@@ -223,7 +236,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit print statement
   public String visit(PrintStatement n, String argu){
-    //System.out.println("We are in PrintStatement");
+    System.out.println("We are in PrintStatement");
     String toPrint_PrimaryExpr = n.f2.accept(this, argu); // visit experssion
     L.Emit_PrintOperation(GetReg(toPrint_PrimaryExpr)); // emit llvm code for the print statement
     return "generated PrintStatementVisited";
@@ -234,9 +247,23 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return n.f0.accept(this,null);
   }
 
+  // Visit and expression
+  public String visit(AndExpression n,String argu){
+    System.out.println("We are in AndExpression");
+    String andlbl1 = L.new_label("andclause");
+    String andlbl2 = L.new_label("andclause");
+    String andlbl3 = L.new_label("andclause");
+    String andlbl4 = L.new_label("andclause");
+    String leftClause_expr = n.f0.accept(this,null);
+    L.Emit_AndOperation_Start(GetReg(leftClause_expr),andlbl1,andlbl2,andlbl4);
+    String rightClause_expr = n.f2.accept(this,null);
+    String result = L.Emit_AndOperation_End(GetReg(rightClause_expr),andlbl1,andlbl3,andlbl4);
+    return result;
+  }
+
   // Visit plus expression
   public String visit(PlusExpression n,String argu){
-    //System.out.println("We are in plus expression");
+    System.out.println("We are in plus expression");
     String left_PrimaryExpr,right_PrimaryExpr;
     left_PrimaryExpr = n.f0.accept(this,null);
     right_PrimaryExpr = n.f2.accept(this,null);
@@ -246,7 +273,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit sub expression
   public String visit(MinusExpression n,String argu){
-    //System.out.println("We are in min expression");
+    System.out.println("We are in min expression");
     String left_PrimaryExpr,right_PrimaryExpr;
     left_PrimaryExpr = n.f0.accept(this,null);
     right_PrimaryExpr = n.f2.accept(this,null);
@@ -257,7 +284,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit times expression
   public String visit(TimesExpression n, String argu){
-    //System.out.println("We are in TimesExpression");
+    System.out.println("We are in TimesExpression");
     String left_PrimaryExpr,right_PrimaryExpr;
     left_PrimaryExpr = n.f0.accept(this,null);
     right_PrimaryExpr = n.f2.accept(this,null);
@@ -268,7 +295,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit compare expression
   public String visit(CompareExpression n,String argu){
-    //System.out.println("We are in CompareExpression");
+    System.out.println("We are in CompareExpression");
     String left_PrimaryExpr,right_PrimaryExpr;
     left_PrimaryExpr = n.f0.accept(this,null);
     right_PrimaryExpr = n.f2.accept(this,null);
@@ -276,24 +303,30 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return result;
   }
 
+  // Visit array look up
   public String visit(ArrayLookup n,String argu){
-    //System.out.println("We are in ArrayLookup");
+    System.out.println("We are in ArrayLookup");
     String theArray_expr = n.f0.accept(this,null); // Visit primary_expr
     String theIndex_expr = n.f2.accept(this,null); // Visit primary_expr
     String result = L.Emit_ArrayLookUpOperation(GetReg(theArray_expr),GetReg(theIndex_expr));
     return result;
   }
 
+  // Visit clause
+  public String visit(Clause n,String argu){
+    return n.f0.accept(this,null);
+  }
+
   // Visit primary expression
   public String visit(PrimaryExpression n,String argu){
-    //System.out.println("We are in PrimaryExpression");
-    String primary_expr = n.f0.accept(this,null);
+    System.out.println("We are in PrimaryExpression");
+    String primary_expr = n.f0.accept(this,argu);
     // If TrueLiteral return true
-    if(primary_expr.equals("true"))
-      return "true";
+    if(primary_expr.equals("1,i1"))
+      return primary_expr;
     // If FalseLiteral return false
-    else if(primary_expr.equals("false"))
-      return "false";
+    else if(primary_expr.equals("0,i1"))
+      return primary_expr;
     // If integer return the interger
     else if(primary_expr.matches("-?\\d+"))
       return primary_expr;
@@ -320,19 +353,32 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     else{
       // Check if destination is class field that we need to load
       String classField = L.GetSymbolTable().IsClassField(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
+      System.out.println("We are in primary expression checking if call from is a class field " + primary_expr + "->" + classField);
       if(classField != null){
         //System.out.println("assigning to a field array");
-        String casted_Reg = L.Emit_LoadClassField(primary_expr,classField,L.GetCurrentClass()); // Emit llvm code to load field
-        String register = L.Emit_LoadIdentifierForAPrimaryExpr(casted_Reg);
-        return register + "," + L.LLVM_type(classField);
+        String casted_Reg = L.Emit_LoadClassField(primary_expr,GetFieldType(classField),GetFieldClass(classField)); // Emit llvm code to load field
+        String register = L.Emit_LoadIdentifierForAPrimaryExpr(casted_Reg,GetFieldType(classField));
+        if(argu != null)
+          return register + "," + GetFieldType(classField);
+        return register + "," + L.LLVM_type(GetFieldType(classField));
       }
       else{
         String register = L.Emit_LoadIdentifierForAPrimaryExpr(primary_expr);
         String ident_Type = L.GetSymbolTable().GetVarType(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
         String ident_Type_LLVM = L.LLVM_type(ident_Type);
+        if(argu != null)
+          return register + "," + ident_Type;
         return register + "," + ident_Type_LLVM;
       }
     }
+  }
+
+  // Visit not expression
+  public String visit(NotExpression n, String argu){
+    System.out.println("We are in NotExpression");
+    String clause_expr = n.f1.accept(this,null);
+    String result = L.Emit_NotOperation(GetReg(clause_expr));
+    return result;
   }
 
   // Visit integer literal
@@ -342,12 +388,12 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit true literal
   public String visit(TrueLiteral n, String argu){
-     return "true";
+     return "1,i1";
   }
 
   // Visit false literal
   public String visit(FalseLiteral n, String argu){
-     return "false";
+     return "0,i1";
   }
 
   // Visit identifier
@@ -368,7 +414,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
 
   // Visit allocation expression
   public String visit(AllocationExpression n, String argu){
-    //System.out.println("We are in AllocationExpression");
+    System.out.println("We are in AllocationExpression");
     String classObj = n.f1.accept(this,null);
     // add special characters, so we can now that a primary expression if an allocation expression
     return "/" + classObj;

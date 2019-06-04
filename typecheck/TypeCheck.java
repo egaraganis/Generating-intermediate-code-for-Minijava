@@ -414,6 +414,7 @@ public class TypeCheck {
         //System.out.println("\t\t\t     " + thisClass + "." + thisField + " : " + VarCounter);
         ST.classes_data.get(thisClass).ClassSize += size; // Increase class size
         VarCounter += size;
+        // Indicate field's offset in class
         ST.classes_data.get(thisClass).fields_offsets.put(thisField,VarCounter - size);
       }
       // for every method in class, calculate the offset
@@ -434,6 +435,7 @@ public class TypeCheck {
           continue;
         //System.out.println("\t\t\t     " + thisClass + "." + thisMethod + " : " + MethodCounter);
         MethodCounter += 8;
+        // Indicate method's offset in class
         ST.classes_data.get(thisClass).fields_offsets.put(thisMethod,MethodCounter - 8);
       }
       trackClassesFields.put(thisClass,VarCounter);

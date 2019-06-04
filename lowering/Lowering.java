@@ -211,6 +211,19 @@ public class Lowering {
     return new_reg;
   }
 
+  // Emit a load llvm instruction that is going to be used in a primary expression, with type given
+  public String Emit_LoadIdentifierForAPrimaryExpr(String identifier,String identifierType){
+    String CODE;
+    String new_reg = new_temp();
+    String llvm_type = LLVM_type(identifierType);
+    if(!(identifier.startsWith("%")))
+      identifier = "%" + identifier;
+    CODE = "\t" + new_reg + " = load " + llvm_type + ", " + llvm_type + "* " + identifier + "\n";
+    // Append to buffer
+    BUFFER += CODE;
+    return new_reg;
+  }
+
   // Emit calloc and llvm instructions so that a new object cant be created
   public String Emit_AllocationExpressionForAPrimaryExpr(String object){
     String CODE = "";
@@ -262,6 +275,7 @@ public class Lowering {
   // Emit function call before arguments
   public String Emit_FunctionCall(String callFrom,String method,String addressIndex_inVT){
     String CODE = "";
+    System.out.println("from funcall " + callFrom + "," + method + "," + addressIndex_inVT);
     String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
     // Object position in V-table
     int positionInt = 0;
@@ -307,7 +321,7 @@ public class Lowering {
   }
 
   // Emit the code that actually calls the method and return result
-  public String Emit_ResultingCall(String callFrom,String method,String castToCall_Reg,String addressIndex_inVT,ArrayList arguments){
+  public String Emit_ResultingCall(String callFrom,String method,String castToCall_Reg,String addressIndex_inVT,ArrayList<String> arguments){
     String CODE = "";
     String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
     // Call function and store result
@@ -322,7 +336,10 @@ public class Lowering {
    Set<Map.Entry <String,String>> st = ST.classes_data.get(callFrom).methods_data.get(method).arguments_data.entrySet();
    for (Map.Entry<String,String> cur:st){
       String argType = cur.getValue();
-      args_llvm += "," + LLVM_type(argType) + " " + arguments.get(i);
+      String argumentReg = arguments.get(i);
+      if(argumentReg.startsWith("this"))
+        argumentReg = "%" + argumentReg;
+      args_llvm += "," + LLVM_type(argType) + " " + argumentReg;
       i++;
    }
    args_llvm += ")\n";
@@ -337,6 +354,33 @@ public class Lowering {
     String CODE = "\n\tret " + type + " " + toReturn + "\n";
     // Append to BUFFER
     BUFFER += CODE;
+  }
+
+  // Emit and operation in llvm code, starting the operation
+  public void Emit_AndOperation_Start(String reg,String andlbl1,String andlbl2,String andlbl4){
+    String CODE = "";
+    String br = "\tbr label %" + andlbl1 + "\n";
+    String andclause1 = "\n" + andlbl1 + ":\n\tbr i1 " + reg + ", label %" + andlbl2 + ", label %" + andlbl4 + "\n";
+    String andclause2 = "\n" + andlbl2 + ":\n";
+    // Combine code
+    CODE += br + andclause1 + andclause2;
+    // Append to buffer
+    BUFFER += CODE;
+  }
+
+  // Emit and operation in llvm code, ending an operation
+  public String Emit_AndOperation_End(String reg,String andlbl1,String andlbl3,String andlbl4){
+    String CODE = "";
+    String br = "\tbr label %" + andlbl3 + "\n";
+    String andclause3 = "\n" + andlbl3 + ":\n\t br label %" + andlbl4;
+    String andclause4 = "\n" + andlbl4 + ":\n";
+    String phi_reg = new_temp();
+    String phi = "\t" + phi_reg + " = phi i1 [ 0, %" + andlbl1 + " ], [ " + reg + ", %" + andlbl3 + " ]\n";
+    // Combine code
+    CODE += br + andclause3 + andclause4 + phi;
+    // Append code to buffer
+    BUFFER += CODE;
+    return phi_reg;
   }
 
   // Emit minus operation llvm code
@@ -392,28 +436,36 @@ public class Lowering {
     String oob_good_lbl = new_label("oob");
     String oob_bad_lbl = new_label("oob");
     String oob_cont_lbl = new_label("oob");
-    String loadCast_Reg = new_temp();
-    String loadcastedRegister = "\t" + loadCast_Reg + " = load i32*, i32** " + arrReg + "\n";
-    String load_again_Reg = new_temp();
-    String load_again = "\t" + load_again_Reg + " = load i32, i32* " + loadCast_Reg + "\n";
+    String load_Reg = new_temp();
+    String load = "\t" + load_Reg + " = load i32, i32* " + arrReg + "\n";
     String icmp_Reg = new_temp();
-    String icmp = "\t" + icmp_Reg + " = icmp ult i32 " + indexReg + ", " +  load_again_Reg + "\n";
+    String icmp = "\t" + icmp_Reg + " = icmp ult i32 " + indexReg + ", " +  load_Reg + "\n";
     String br1 = "\tbr i1" + icmp_Reg + ",label %" + oob_good_lbl + ",label %" + oob_bad_lbl + "\n";
     String oob_good = "\n" + oob_good_lbl + ":\n";
     String add_Reg = new_temp();
     String add = "\t" + add_Reg + " = add i32 " + indexReg + ", 1\n";
     String elementpointer_Reg = new_temp();
-    String getelementptr = "\t" + elementpointer_Reg + " = getelementptr i32,i32* " + loadCast_Reg + ", i32 " + add_Reg + "\n";
+    String getelementptr = "\t" + elementpointer_Reg + " = getelementptr i32,i32* " + arrReg + ", i32 " + add_Reg + "\n";
     String loadel_Reg = new_temp();
-    String load = "\t" + loadel_Reg + " = load i32, i32* " + elementpointer_Reg + "\n";
+    String loadel = "\t" + loadel_Reg + " = load i32, i32* " + elementpointer_Reg + "\n";
     String br2 = "\tbr label %" + oob_cont_lbl + "\n";
     String oob_bad = "\n" + oob_bad_lbl + ":\n\tcall void @throw_oob()\n\tbr label %" + oob_cont_lbl + "\n";
     String oob_cont = "\n" + oob_cont_lbl + ":\n";
     // Combine code
-    CODE += loadcastedRegister + load_again + icmp + br1 + oob_good + add + getelementptr + load + br2 + oob_bad + oob_cont;
+    CODE += load + icmp + br1 + oob_good + add + getelementptr + loadel + br2 + oob_bad + oob_cont;
     // Append code to buffer
     BUFFER += CODE;
     return loadel_Reg;
+  }
+
+  // Emit not operation
+  public String Emit_NotOperation(String reg){
+    String CODE = "";
+    String xor_reg = new_temp();
+    CODE += "\t" + xor_reg + " = xor i1 1," + reg + "\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return xor_reg;
   }
 
   // Emit if statement llvm code , 1rst part
@@ -422,7 +474,7 @@ public class Lowering {
     // Emit br code
     CODE += "\n\tbr i1 " + reg + ", label %" + iflbl + ", label %" + elselbl + "\n";
     // Emit the label
-    CODE += iflbl + ": \n";
+    CODE += "\n" + iflbl + ": \n";
     // Append code to buffer
     BUFFER += CODE;
   }
@@ -470,11 +522,12 @@ public class Lowering {
   // Emit llvm code to load a class' field
   public String Emit_LoadClassField(String fieldName,String fieldType,String className){
     String CODE = "";
+    System.out.println(fieldName + "," + fieldType + "," + className);
     int positionInVT_int = 8 + ST.classes_data.get(className).fields_offsets.get(fieldName);
     String positionInVT = Integer.toString(positionInVT_int);
     // getelementptr code
     String fieldPointerInVt_reg = new_temp();
-    String getelementptr = "\t" + fieldPointerInVt_reg + " = getelementptr i8,i8* %this, " + LLVM_type(fieldType) + " " + positionInVT + "\n";
+    String getelementptr = "\t" + fieldPointerInVt_reg + " = getelementptr i8,i8* %this, i32 " + positionInVT + "\n";
     // bitcast code
     String casted_Reg = new_temp();
     String bitcast = "\t" + casted_Reg + " = bitcast i8* " + fieldPointerInVt_reg + " to " + LLVM_type(fieldType) + "*\n";
@@ -488,6 +541,8 @@ public class Lowering {
   // Emit assign operation in llvm to a class field
   public void Emit_AssignmentStatement_ToClassField(String expr,String fieldType,String dest){
     String CODE = "";
+    if(expr.equals("this"))
+      expr = "%this";
     CODE = "\tstore " + LLVM_type(fieldType) + " " + expr + ", " + LLVM_type(fieldType) + "* " + dest + "\n";
     // Append code to buffer
     BUFFER += CODE;
@@ -496,6 +551,8 @@ public class Lowering {
   // Emit assign operation in llvm to a local method var
   public void Emit_AssignmentStatement_ToLocalVar(String des,String expr){
     String CODE = "";
+    if(expr.equals("this"))
+      expr = "%this";
     String statements_type_llvm = LLVM_type(ST.GetVarType(des,currentClass,currentMethod));
     CODE = "\tstore " + statements_type_llvm + " " + expr + "," + statements_type_llvm + "* %" + des + "\n";
     // Append code to buffer
@@ -514,7 +571,7 @@ public class Lowering {
     String load_again = "\t" + load_loaded_reg + " = load i32,i32* " + load_index_reg + "\n";
     String icmp_Reg = new_temp();
     String icmp = "\t" + icmp_Reg + " = icmp ult i32 0, " + load_loaded_reg + "\n";
-    String br = "\tbr i1 " + icmp_Reg + ", label " + oob_good_lbl + ", label " + oob_bad_lbl + "\n";
+    String br = "\tbr i1 " + icmp_Reg + ", label %" + oob_good_lbl + ", label %" + oob_bad_lbl + "\n";
     String oob_good = "\n" + oob_good_lbl + ":\n";
     String add_Reg = new_temp();
     String add = "\t" + add_Reg + " = add i32 " + index + ",1\n";

@@ -142,7 +142,16 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     String bitcastedReg = L.Emit_FunctionCall(callFrom,method,callerReg); // Emit the function call
     String arguments_llvm = n.f4.accept(this,null); // Visit expression list aka the arguments of calling fun
     String result = L.Emit_ResultingCall(callFrom,method,bitcastedReg,callerReg,stacked_args.pop());
-    String method_type = L.GetSymbolTable().classes_data.get(callFrom).methods_data.get(method).type;
+    String method_type;
+    MethodInfo method_inf = L.GetSymbolTable().classes_data.get(callFrom).methods_data.get(method);
+    if(method_inf == null){
+      String searchResult = L.GetSymbolTable().SearchAncestors_ForMethod(callFrom,method);
+      String[] resultTokenized = searchResult.split("/");
+      method_type = resultTokenized[0];
+      callFrom = resultTokenized[1];
+    }
+    else
+      method_type = method_inf.type;
     return result + "," + L.LLVM_type(method_type);
   }
 

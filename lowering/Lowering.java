@@ -146,7 +146,7 @@ public class Lowering {
   // Emit Main Method LLVM code
   public void Emit_MainMethodDefinition(){
     String CODE = "\n\ndefine i32 @main() {\n";
-
+    // Append code to buffer
     BUFFER += CODE;
   }
 
@@ -159,6 +159,7 @@ public class Lowering {
 
   // Emit closing bracket
   public void Emit_RBRACK(){
+    // Append code to buffer
     BUFFER += "\n}";
   }
 
@@ -166,6 +167,7 @@ public class Lowering {
   public void Emit_VarDeclaration(String vtype,String vname){
     if( currentMethod != ""){
       String CODE = "\t%" + vname + " = alloca " + LLVM_type(vtype) + "\n";
+      // Append code to buffer
       BUFFER += CODE;
     }
   }
@@ -275,7 +277,16 @@ public class Lowering {
   // Emit function call before arguments
   public String Emit_FunctionCall(String callFrom,String method,String addressIndex_inVT){
     String CODE = "";
-    String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
+    String method_type;
+    MethodInfo method_inf = ST.classes_data.get(callFrom).methods_data.get(method);
+    if(method_inf == null){
+      String searchResult = ST.SearchAncestors_ForMethod(callFrom,method);
+      String[] result = searchResult.split("/");
+      method_type = result[0];
+      callFrom = result[1];
+    }
+    else
+      method_type = method_inf.type;
     // Object position in V-table
     int positionInt = 0;
     // find elements position in vtable
@@ -322,7 +333,16 @@ public class Lowering {
   // Emit the code that actually calls the method and return result
   public String Emit_ResultingCall(String callFrom,String method,String castToCall_Reg,String addressIndex_inVT,ArrayList<String> arguments){
     String CODE = "";
-    String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
+    String method_type;
+    MethodInfo method_inf = ST.classes_data.get(callFrom).methods_data.get(method);
+    if(method_inf == null){
+      String searchResult = ST.SearchAncestors_ForMethod(callFrom,method);
+      String[] result = searchResult.split("/");
+      method_type = result[0];
+      callFrom = result[1];
+    }
+    else
+      method_type = method_inf.type;
     // Call function and store result
    String result_Reg = new_temp();
    String callFunction = "\t" + result_Reg + " = call " + LLVM_type(method_type) + " " + castToCall_Reg + "(";

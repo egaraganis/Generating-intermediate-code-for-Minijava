@@ -49,6 +49,18 @@ public class SymbolTable {
     return "";
   }
 
+  // Return method's type that have been declared to an ancestor
+  public String SearchAncestors_ForMethod(String className,String method){
+    String superclass = classes_data.get(className).extendsFrom;
+    while(superclass != ""){
+      String type = classes_data.get(superclass).methods_data.get(method).type;
+      if(type != null)
+        return type + "/" + superclass; // return field's type and the class belonging to
+      superclass = classes_data.get(superclass).extendsFrom;
+    }
+    return "";
+  }
+
   // Return given variable's type
   public String GetVarType(String var,String currentClass,String currentMethod){
     String typeGotFromField,typeGotFromMethodVar,typeGotFromMethodArg,typeGotFromSuperField=null;

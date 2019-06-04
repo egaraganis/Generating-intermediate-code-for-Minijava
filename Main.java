@@ -11,6 +11,7 @@ class Main {
       System.exit(1);
     }
     FileInputStream fis = null;
+    int files_generated = 0;
     // Static Checking for every file given as input
     for(int i=0; i<args.length; i++){
       try {
@@ -29,11 +30,10 @@ class Main {
         // Generate LLVM code - Lowering visitor
         LWRVisitor LoweringVisitor = new LWRVisitor(args[i],SymbolTablePopulator.getSymbolTable());
         root.accept(LoweringVisitor,null);
-        // Log llvm code to output
-        LoweringVisitor.getL().Log_Buffer();
         // Write llvm code to file
         String outputFile_Name = LoweringVisitor.getOutput();
         LoweringVisitor.getL().Write_To_File(outputFile_Name);
+        files_generated++;
       }
       catch (ParseException ex) {
         System.out.println(ex.getMessage());
@@ -53,5 +53,6 @@ class Main {
         }
       }
     }
+    System.out.println("\n\n  ✓ Generated LLVM code for " + Integer.toString(files_generated) + " out of " + Integer.toString(args.length) + " input files");
   }
 }

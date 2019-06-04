@@ -275,7 +275,6 @@ public class Lowering {
   // Emit function call before arguments
   public String Emit_FunctionCall(String callFrom,String method,String addressIndex_inVT){
     String CODE = "";
-    System.out.println("from funcall " + callFrom + "," + method + "," + addressIndex_inVT);
     String method_type = ST.classes_data.get(callFrom).methods_data.get(method).type;
     // Object position in V-table
     int positionInt = 0;
@@ -424,8 +423,10 @@ public class Lowering {
   }
 
   // Emit print statement in llvm
-  public void Emit_PrintOperation(String toPrint){
-    String CODE = "\tcall void (i32) @print_int(i32 " + toPrint + ")\n";
+  public void Emit_PrintOperation(String toPrint,String type){
+    if(type.matches("-?\\d+"))
+      type = "i32";
+    String CODE = "\tcall void (" + type + ") @print_int(" + type + " " + toPrint + ")\n";
     // Append to buffer
     BUFFER += CODE;
   }
@@ -456,6 +457,14 @@ public class Lowering {
     // Append code to buffer
     BUFFER += CODE;
     return loadel_Reg;
+  }
+
+  // Emit array length operation
+  public String Emit_LengthOperation(String theArray_expr){
+    String CODE = "";
+    String lengthReg = new_temp();
+    CODE = "\t" + lengthReg + " = load i32,i32* " + theArray_expr + "\n";
+    return lengthReg;
   }
 
   // Emit not operation
@@ -522,7 +531,6 @@ public class Lowering {
   // Emit llvm code to load a class' field
   public String Emit_LoadClassField(String fieldName,String fieldType,String className){
     String CODE = "";
-    System.out.println(fieldName + "," + fieldType + "," + className);
     int positionInVT_int = 8 + ST.classes_data.get(className).fields_offsets.get(fieldName);
     String positionInVT = Integer.toString(positionInVT_int);
     // getelementptr code
@@ -595,7 +603,7 @@ public class Lowering {
   // Write BUFFER's code to file
   public void Write_To_File(String fileName) throws FileNotFoundException {
     try{
-      System.out.println("\n\nWriting code to " + fileName);
+      System.out.println("\n     ⤏ Writing code to " + fileName);
       PrintWriter out = new PrintWriter(fileName);
       out.println(BUFFER);
       out.close();

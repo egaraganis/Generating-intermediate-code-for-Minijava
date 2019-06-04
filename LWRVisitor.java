@@ -191,7 +191,7 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     }
     String typeOfIndex_Expr = n.f2.accept(this,null); // visit index expression
     String typeOfExpr_Expr = n.f5.accept(this,null); // visit the value expression to be assigned
-    return "ArrayAssignmentStatementVisited";
+    return "generatd ArrayAssignmentStatementVisited";
   }
 
   // Visit if statement
@@ -208,6 +208,17 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     n.f6.accept(this,null); // Visit statement of else
     L.Emit_NextStatement(endStatement,endStatement);
     return "generated IfVisited";
+  }
+
+  // Visit while statement
+  public String visit(WhileStatement n, String argu){
+    //System.out.println("We are in WhileStatement");
+    String start_label = L.Emit_WhileStatement_StartOfLoop();
+    String condition_Expr = n.f2.accept(this,null); // Visit expression
+    String end_label = L.Emit_WhileStatement_AfterCondition(GetReg(condition_Expr));
+    n.f4.accept(this,null); // Visit statement of while
+    L.Emit_WhileStatement_EndOfLoop(start_label,end_label);
+    return "generated WhileStatementVisited";
   }
 
   // Visit print statement
@@ -265,6 +276,14 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
     return result;
   }
 
+  public String visit(ArrayLookup n,String argu){
+    //System.out.println("We are in ArrayLookup");
+    String theArray_expr = n.f0.accept(this,null); // Visit primary_expr
+    String theIndex_expr = n.f2.accept(this,null); // Visit primary_expr
+    String result = L.Emit_ArrayLookUpOperation(GetReg(theArray_expr),GetReg(theIndex_expr));
+    return result;
+  }
+
   // Visit primary expression
   public String visit(PrimaryExpression n,String argu){
     //System.out.println("We are in PrimaryExpression");
@@ -299,10 +318,20 @@ public class LWRVisitor extends GJDepthFirst <String,String> {
       return primary_expr;
     // If we have an identifier, load it
     else{
-      String register = L.Emit_LoadIdentifierForAPrimaryExpr(primary_expr);
-      String ident_Type = L.GetSymbolTable().GetVarType(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
-      String ident_Type_LLVM = L.LLVM_type(ident_Type);
-      return register + "," + ident_Type_LLVM;
+      // Check if destination is class field that we need to load
+      String classField = L.GetSymbolTable().IsClassField(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
+      if(classField != null){
+        //System.out.println("assigning to a field array");
+        String casted_Reg = L.Emit_LoadClassField(primary_expr,classField,L.GetCurrentClass()); // Emit llvm code to load field
+        String register = L.Emit_LoadIdentifierForAPrimaryExpr(casted_Reg);
+        return register + "," + L.LLVM_type(classField);
+      }
+      else{
+        String register = L.Emit_LoadIdentifierForAPrimaryExpr(primary_expr);
+        String ident_Type = L.GetSymbolTable().GetVarType(primary_expr,L.GetCurrentClass(),L.GetCurrentMethod());
+        String ident_Type_LLVM = L.LLVM_type(ident_Type);
+        return register + "," + ident_Type_LLVM;
+      }
     }
   }
 

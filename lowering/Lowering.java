@@ -386,6 +386,36 @@ public class Lowering {
     BUFFER += CODE;
   }
 
+  // Emit array lookup in llvm
+  public String Emit_ArrayLookUpOperation(String arrReg, String indexReg){
+    String CODE = "";
+    String oob_good_lbl = new_label("oob");
+    String oob_bad_lbl = new_label("oob");
+    String oob_cont_lbl = new_label("oob");
+    String loadCast_Reg = new_temp();
+    String loadcastedRegister = "\t" + loadCast_Reg + " = load i32*, i32** " + arrReg + "\n";
+    String load_again_Reg = new_temp();
+    String load_again = "\t" + load_again_Reg + " = load i32, i32* " + loadCast_Reg + "\n";
+    String icmp_Reg = new_temp();
+    String icmp = "\t" + icmp_Reg + " = icmp ult i32 " + indexReg + ", " +  load_again_Reg + "\n";
+    String br1 = "\tbr i1" + icmp_Reg + ",label %" + oob_good_lbl + ",label %" + oob_bad_lbl + "\n";
+    String oob_good = "\n" + oob_good_lbl + ":\n";
+    String add_Reg = new_temp();
+    String add = "\t" + add_Reg + " = add i32 " + indexReg + ", 1\n";
+    String elementpointer_Reg = new_temp();
+    String getelementptr = "\t" + elementpointer_Reg + " = getelementptr i32,i32* " + loadCast_Reg + ", i32 " + add_Reg + "\n";
+    String loadel_Reg = new_temp();
+    String load = "\t" + loadel_Reg + " = load i32, i32* " + elementpointer_Reg + "\n";
+    String br2 = "\tbr label %" + oob_cont_lbl + "\n";
+    String oob_bad = "\n" + oob_bad_lbl + ":\n\tcall void @throw_oob()\n\tbr label %" + oob_cont_lbl + "\n";
+    String oob_cont = "\n" + oob_cont_lbl + ":\n";
+    // Combine code
+    CODE += loadcastedRegister + load_again + icmp + br1 + oob_good + add + getelementptr + load + br2 + oob_bad + oob_cont;
+    // Append code to buffer
+    BUFFER += CODE;
+    return loadel_Reg;
+  }
+
   // Emit if statement llvm code , 1rst part
   public void Emit_IfStatement(String iflbl,String elselbl,String reg){
     String CODE = "";
@@ -404,6 +434,35 @@ public class Lowering {
     CODE +=  "\n\tbr label %" + endlbl + "\n";
     // Emit code of next's statement
     CODE += elselbl + ":\n";
+    // Append code to buffer
+    BUFFER += CODE;
+  }
+
+  // Emit while llvm statement code, the start of the loop
+  public String Emit_WhileStatement_StartOfLoop(){
+    String CODE = "";
+    String start_lbl = new_label("loop");
+    CODE = "\tbr label %" + start_lbl + "\n\n" + start_lbl + ":\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return start_lbl;
+  }
+
+  // Emit while statement llvm code, after emiting condiotion's code
+  public String Emit_WhileStatement_AfterCondition(String expr_Reg){
+    String CODE = "";
+    String body_lbl = new_label("loop");
+    String end_lbl = new_label("loop");
+    CODE = "\tbr i1 " + expr_Reg + ",label %" + body_lbl + ", label %" + end_lbl + "\n\n" + body_lbl + ":\n";
+    // Append code to buffer
+    BUFFER += CODE;
+    return end_lbl;
+  }
+
+  // Emit while statement llvm code, after while's boyd code
+  public void Emit_WhileStatement_EndOfLoop(String start_lbl,String end_lbl){
+    String CODE = "";
+    CODE = "\n\tbr label %" + start_lbl + "\n\n" + end_lbl + ":\n\n";
     // Append code to buffer
     BUFFER += CODE;
   }
